@@ -40,7 +40,7 @@ void rsndDecodeStream(const SoundStream& soundStream, CliOpts& cliOpts) {
 void rsndDecode(CliOpts& cliOpts) {
   size_t inputSize;
   void* inputData = readBinary(cliOpts.inputFile, inputSize);
-  FileFormat inputFormat = detectFileFormat(cliOpts.inputFile.filename(), inputData, inputSize);
+  FileFormat inputFormat = detectFileFormat(cliOpts.inputFile.filename().string(), inputData, inputSize);
   switch (inputFormat)
   {
   case FMT_BRWAV: {

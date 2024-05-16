@@ -560,7 +560,7 @@ std::vector<uint8_t> SF2File::SaveToMem() {
   return buf;
 }
 
-bool SF2File::SaveSF2File(const std::string &filepath) {
+bool SF2File::SaveSF2File(const std::filesystem::path &filepath) {
   auto buf = SaveToMem();
   rsnd::writeBinary(filepath, buf.data(), buf.size());
   return true;

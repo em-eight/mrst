@@ -1,5 +1,7 @@
 #pragma once
 
+#include <filesystem>
+
 #include "common.h"
 #include "RiffFile.h"
 
@@ -282,5 +284,5 @@ class SF2File: public RiffFile {
   ~SF2File() override = default;
 
   std::vector<uint8_t> SaveToMem();
-  bool SaveSF2File(const std::string &filepath);
+  bool SaveSF2File(const std::filesystem::path &filepath);
 };
