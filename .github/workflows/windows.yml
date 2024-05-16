@@ -1,0 +1,40 @@
+# Build and push artifacts
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-push:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install LLVM
+      run: choco install -y llvm
+    - name: Install Ninja
+      run: choco install -y ninja
+
+    - name: CMake generate
+      shell: bash
+      env:
+        ARTIFACT_NAME: mrst-${{ runner.os }}
+      run: |
+        cmake -S . -B build -GNinja \
+          -Dprotobuf_MSVC_STATIC_RUNTIME=ON \
+          -DCMAKE_INSTALL_PREFIX=$ARTIFACT_NAME \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DBUILD_TESTING=OFF \
+          -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+    - name: Build
+      shell: bash
+      run: cmake --build build --target install --parallel --verbose
+    
+    - uses: actions/upload-artifact@v3
+      if: github.ref == 'refs/heads/main' && github.repository == 'em-eight/mrst'
+      with:
+        name: mrst-${{ runner.os }}
+        path: mrst-${{ runner.os }}
