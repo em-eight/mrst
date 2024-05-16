@@ -112,7 +112,7 @@ void rsndListRseq(const SoundSequence& soundSeq, CliOpts& cliOpts) {
 void rsndList(CliOpts& cliOpts) {
   size_t inputSize;
   void* inputData = readBinary(cliOpts.inputFile, inputSize);
-  FileFormat inputFormat = detectFileFormat(cliOpts.inputFile.filename(), inputData, inputSize);
+  FileFormat inputFormat = detectFileFormat(cliOpts.inputFile.filename().string(), inputData, inputSize);
   switch (inputFormat)
   {
   case FMT_BRSAR: {

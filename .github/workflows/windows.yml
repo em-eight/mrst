@@ -13,8 +13,6 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Install LLVM
-      run: choco install -y llvm
     - name: Install Ninja
       run: choco install -y ninja
 
@@ -24,11 +22,10 @@ jobs:
         ARTIFACT_NAME: mrst-${{ runner.os }}
       run: |
         cmake -S . -B build -GNinja \
-          -Dprotobuf_MSVC_STATIC_RUNTIME=ON \
           -DCMAKE_INSTALL_PREFIX=$ARTIFACT_NAME \
           -DCMAKE_BUILD_TYPE=Release \
           -DBUILD_TESTING=OFF \
-          -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+          -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
     - name: Build
       shell: bash
       run: cmake --build build --target install --parallel --verbose

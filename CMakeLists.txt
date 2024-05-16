@@ -34,3 +34,15 @@ target_include_directories(rsnd PUBLIC include external)
 add_executable(mrst src/mrst.cpp)
 target_include_directories(mrst PUBLIC include)
 target_link_libraries(mrst rsnd)
+
+install(TARGETS rsnd EXPORT export_rsnd
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+
+# executables
+install(TARGETS mrst DESTINATION bin)
+
+# headers
+install(DIRECTORY include/ DESTINATION include/${PROJECT_NAME})
