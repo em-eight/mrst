@@ -7,6 +7,14 @@
 #pragma once
 
 template <class T>
+void DeleteVect(std::vector<T *> &vect) {
+  for (auto p : vect) {
+    delete p;
+  }
+  vect.clear();
+}
+
+template <class T>
 void DeleteList(std::list<T *> &list) {
   for (auto p : list) {
     delete p;
