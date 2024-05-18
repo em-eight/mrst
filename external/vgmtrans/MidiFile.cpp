@@ -9,13 +9,15 @@
 #include <list>
 #include <cmath>
 #include <algorithm>
+#include <iostream>
 
 #include "common/fileUtil.hpp"
+#include "common/util.h"
 #include "rsnd/SoundSequence.hpp"
 #include "helper.h"
 #include "MidiFile.h"
 
-MidiFile::MidiFile(rsnd::SoundSequence *theAssocSeq)
+MidiFile::MidiFile(const rsnd::SoundSequence *theAssocSeq)
     : assocSeq(theAssocSeq),
       globalTrack(this, false),
       globalTranspose(0),
@@ -79,7 +81,273 @@ bool MidiFile::SaveMidiFile(const std::string &filepath) {
   return true;
 }
 
+uint32_t ReadVarLen(const u8* data, uint32_t &offset) {
+  uint32_t value = 0;
+
+  for (int i = 0; i < 5; i++) {
+	  uint8_t c = *(data + offset++);
+    value = (value << 7) + (c & 0x7F);
+	  // Check if continue bit is set
+	  if((c & 0x80) == 0) {
+		  break;
+	  }
+  }
+  return value;
+}
+
+rsnd::SeqArgType nextArgType = rsnd::SEQ_ARG_NONE;
+
+uint32_t ReadArg(rsnd::SeqArgType defaultArgType, const u8* data, uint32_t &offset) {
+  rsnd::SeqArgType argType = nextArgType == rsnd::SEQ_ARG_NONE ? defaultArgType : nextArgType;
+  nextArgType = rsnd::SEQ_ARG_NONE;
+
+  switch (argType) {
+  case rsnd::SEQ_ARG_VARIABLE:
+    return ReadVarLen(data, offset);
+  case rsnd::SEQ_ARG_U8:
+    return *(data + offset++);
+  case rsnd::SEQ_ARG_S16: {
+    auto val = std::byteswap(*(u16*)(data + offset));
+    offset += 2;
+    return val;
+  } case rsnd::SEQ_ARG_RANDOM: {
+    int16_t min = std::byteswap(*(u16*)(data + offset));
+    offset += 2;
+    int16_t max = std::byteswap(*(u16*)(data + offset));
+    offset += 2;
+    /* To be consistent, return the average of min/max. */
+    return (min + max) / 2;
+  }
+  case rsnd::SEQ_ARG_NONE:
+  default:
+    std::cerr << "Warning: unhandled argument type " << argType << '\n';
+    return 0;
+  }
+
+  return ReadVarLen(data, offset);
+}
+
+uint32_t readbe24(const u8* data, uint32_t &offset) {
+  const u8* bytes = data + offset;
+  uint32_t result = (uint32_t)bytes[2] |
+                      (uint32_t)bytes[1] << 8  |
+                      (uint32_t)bytes[0] << 16;
+  
+  offset += 3;
+  return result;
+}
+
+#include <stack>
+#include <queue>
+#include <unordered_set>
+
+struct StackFrame {
+  uint32_t retOffset;
+  uint32_t delta;
+  uint32_t loopCount;
+};
+
+struct TrackQueueElem {
+  u32 trackIdx; // player track idx
+  u32 delta;
+  u32 begOffset;
+};
+
 void MidiFile::WriteMidiToBuffer(std::vector<uint8_t> &buf) {
+  u8 c = 0;
+  const u8* trackData = static_cast<const u8*>(assocSeq->getSeqData());
+  std::queue<TrackQueueElem> toProcessTracks;
+  toProcessTracks.push({ 0, 0, 0 });
+
+  while (!toProcessTracks.empty()) {
+    TrackQueueElem toProcessTrack = toProcessTracks.front();
+    toProcessTracks.pop();
+
+    std::stack<StackFrame> callStack;
+    std::unordered_set<u32> processedJumps;
+
+    MidiTrack* t = this->AddTrack();
+    t->SetDelta(toProcessTrack.delta);
+
+    // parse track
+    u32 curOffset = toProcessTrack.begOffset;
+    c = toProcessTrack.trackIdx;
+    s8 transpose = 0;
+    bool noteWait = false;
+    bool exitLoop = false;
+    while (!exitLoop) {
+      int beginOffset = curOffset;
+      u8 status_byte = *rsnd::getOffsetT<const u8>(trackData, curOffset++);
+      if (status_byte < 0x80) {
+        /* Note on. */
+        uint8_t vel = *rsnd::getOffsetT<const u8>(trackData, curOffset++);
+        int dur = ReadArg(rsnd::SEQ_ARG_VARIABLE, trackData, curOffset);
+        t->AddNoteByDur(c, status_byte + transpose, vel, dur);
+        std::cout << "Note " << std::dec << (int)status_byte << ", " << (int)vel << ", " << (int)dur << '\n';
+        if (noteWait) {
+          t->AddDelta(dur);
+        }
+      } else {
+        switch (status_byte)
+        {
+        case rsnd::MML_RANDOM:
+        {
+          nextArgType = rsnd::SEQ_ARG_RANDOM;
+          break;
+        }
+        case rsnd::MML_WAIT:
+        {
+          int dur = ReadArg(rsnd::SEQ_ARG_VARIABLE, trackData, curOffset);
+          std::cout << "rest " << std::dec << (int)dur << '\n';
+          t->PurgePrevNoteOffs();
+          t->AddDelta(dur);
+          break;
+        }
+        case rsnd::MML_PRG:
+        {
+          u8 prog = ReadArg(rsnd::SEQ_ARG_VARIABLE, trackData, curOffset);
+          std::cout << "Program change " << std::dec << (int)prog << '\n';
+          t->AddProgramChange(c, prog);
+          break;
+        }
+        case rsnd::MML_PAN:
+        {
+          u8 pan = *(trackData + curOffset++);
+          t->AddPan(c, pan);
+          break;
+        }
+        case rsnd::MML_VOLUME:
+        {
+          u8 vol = *(trackData + curOffset++);
+          t->AddVol(c, vol);
+          break;
+        }
+        case rsnd::MML_MAIN_VOLUME:
+        {
+          u8 vol = *(trackData + curOffset++);
+          t->AddMasterVol(c, vol);
+          break;
+        }
+        case rsnd::MML_TRANSPOSE:
+        {
+          transpose = ReadArg(rsnd::SEQ_ARG_U8, trackData, curOffset);
+          break;
+        }
+        case rsnd::MML_PITCH_BEND:
+        {
+          u8 pitch_bend = ReadArg(rsnd::SEQ_ARG_U8, trackData, curOffset);
+          t->AddPitchBend(c, pitch_bend);
+          break;
+        }
+        case rsnd::MML_BEND_RANGE:
+        {
+          u8 bend_range = *(trackData + curOffset++);
+          t->AddPitchBendRange(c, bend_range, 0);
+          break;
+        }
+        case rsnd::MML_PORTA_SW:
+        {
+          bool portOn = *(trackData + curOffset++) != 0;
+          t->AddPortamento(c, portOn);
+          break;
+        }
+        case rsnd::MML_PORTA_TIME:
+        {
+          u8 portTime = *(trackData + curOffset++);
+          t->AddPortamentoTime(c, portTime);
+          break;
+        }
+        case rsnd::MML_TEMPO:
+        {
+          s16 tempo = ReadArg(rsnd::SEQ_ARG_S16, trackData, curOffset);
+          t->AddTempoBPM(tempo);
+          break;
+        }
+        case rsnd::MML_FIN:
+        {
+          exitLoop = true;
+          break;
+        }
+        // MIDI incompatible commands
+        case rsnd::MML_ALLOC_TRACK:
+        {
+          curOffset += 2;
+          break;
+        }
+        case rsnd::MML_OPEN_TRACK:
+        {
+          auto trackNo = *(trackData + curOffset++);
+          auto begOffset = readbe24(trackData, curOffset);
+          toProcessTracks.push({ trackNo, t->GetDelta(), begOffset});
+          break;
+        }
+        case rsnd::MML_CALL:
+        {
+          u32 destOffset = readbe24(trackData, curOffset);
+          callStack.push({ curOffset, t->GetDelta(), 0 });
+          curOffset = destOffset;
+          std::cout << "push curOffset " << curOffset << std::endl;
+          break;
+        }
+        case rsnd::MML_RET:
+        {
+          if (callStack.size() == 0) {
+            exitLoop = true;
+            break;
+          }
+          curOffset = callStack.top().retOffset;
+          callStack.pop();
+          std::cout << "pop curOffset " << curOffset << std::endl;
+          break;
+        }
+        case rsnd::MML_JUMP:
+        {
+          // TODO: jump?
+          u32 destOffset = readbe24(trackData, curOffset);
+          if (processedJumps.contains(curOffset)) {
+            /* This isn't going to go anywhere... just quit early. */
+            exitLoop = true;
+          } else {
+            processedJumps.insert(curOffset);
+            curOffset = destOffset;
+            std::cout << "Jump curOffset " << curOffset << std::endl;
+          }
+          break;
+        }
+        case rsnd::MML_NOTE_WAIT:
+        {
+          noteWait = !!*(trackData + curOffset++);
+          break;
+        }
+        case rsnd::MML_MOD_DEPTH:
+        {
+          u8 amount = *(trackData + curOffset++);
+          t->AddModulation(c, amount);
+          break;
+        }
+        case rsnd::MML_MOD_SPEED:
+        case rsnd::MML_MOD_TYPE:
+        case rsnd::MML_MOD_RANGE:
+        {
+          curOffset++;
+          break;
+        }
+        case rsnd::MML_FXSEND_A:
+        case rsnd::MML_FXSEND_B:
+        case rsnd::MML_FXSEND_C:
+          curOffset++;
+          break;
+        default:
+          std::cerr << "Error: Unknown MML command " << std::hex << "0x" << (int)status_byte << '\n';
+          exit(-1);
+          break;
+        }
+      }
+    }
+  }
+  
+  Sort();
+
   size_t nNumTracks = aTracks.size();
   buf.push_back('M');
   buf.push_back('T');
@@ -95,8 +363,6 @@ void MidiFile::WriteMidiToBuffer(std::vector<uint8_t> &buf) {
   buf.push_back(nNumTracks & 0x00FF);         //num tracks lo
   buf.push_back((ppqn & 0xFF00) >> 8);
   buf.push_back(ppqn & 0xFF);
-
-  Sort();
 
   for (uint32_t i = 0; i < aTracks.size(); i++) {
     if (aTracks[i]) {

@@ -105,7 +105,7 @@ void rsndListRseq(const SoundSequence& soundSeq, CliOpts& cliOpts) {
 
   for (int i = 0; i < labelCount; i++) {
     const auto* seqLabel = soundSeq.getSeqLabel(i);
-    std::cout << "- " << seqLabel->nameStr() << '\n';
+    std::cout << i << ") " << seqLabel->nameStr() << ", offset: " << seqLabel->dataOffset << '\n';
   }
 }
 

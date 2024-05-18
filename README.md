@@ -27,7 +27,7 @@ Decodes file into modern standard format. BRSTM/BRWAV files are converted to WAV
 | BRWAV  | N    | N/A     | Y      |
 | BRSTM  | N    | N/A     | Y      |
 | BRBNK  | Y    | N/A     | Y      |
-| BRSEQ  | Y    | N/A     | TBA    |
+| BRSEQ  | Y    | N/A     | Y      |
 | BRWSD  | TBA  | N/A     | TBA    |
 
 ## Recommended TODO

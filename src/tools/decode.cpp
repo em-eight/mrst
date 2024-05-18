@@ -4,9 +4,11 @@
 #include "rsnd/soundCommon.hpp"
 #include "rsnd/SoundWave.hpp"
 #include "rsnd/SoundStream.hpp"
+#include "rsnd/SoundSequence.hpp"
 #include "common/fileUtil.hpp"
 #include "tools/decode.hpp"
 #include "tools/common.hpp"
+#include "vgmtrans/MidiFile.h"
 
 namespace rsnd {
 void rsndDecodeWave(const SoundWave& soundWave, CliOpts& cliOpts) {
@@ -37,6 +39,16 @@ void rsndDecodeStream(const SoundStream& soundStream, CliOpts& cliOpts) {
   }
 }
 
+void rsndDecodeSequence(const SoundSequence& soundSequence, CliOpts& cliOpts) {
+  if (cliOpts.outputPath.empty()) {
+    auto tmp = cliOpts.inputFile;
+    tmp.replace_extension(".mid");
+    cliOpts.outputPath = tmp;
+  }
+  MidiFile midiFile(&soundSequence);
+  midiFile.SaveMidiFile(cliOpts.outputPath);
+}
+
 void rsndDecode(CliOpts& cliOpts) {
   size_t inputSize;
   void* inputData = readBinary(cliOpts.inputFile, inputSize);
@@ -51,6 +63,11 @@ void rsndDecode(CliOpts& cliOpts) {
   } case FMT_BRSTM: {
     SoundStream soundStream(inputData, inputSize);
     rsndDecodeStream(soundStream, cliOpts);
+    break;
+
+  } case FMT_BRSEQ: {
+    SoundSequence soundSequence(inputData, inputSize);
+    rsndDecodeSequence(soundSequence, cliOpts);
     break;
 
   } default:

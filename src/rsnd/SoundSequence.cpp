@@ -41,7 +41,7 @@ SoundSequence::SoundSequence(void* fileData, size_t fileSize) {
 
   seqData = getOffsetT<SoundSequenceData>(data, seqHdr->dataOffset);
   if (falseEndian) seqData->bswap();
-  dataBase = getOffset(seqData, sizeof(BinaryBlockHeader));
+  dataBase = getOffset(seqData, seqData->offset);
 
   label = getOffsetT<SoundSequenceLabel>(data, seqHdr->lablOffset);
   if (falseEndian) label->bswap();
@@ -51,7 +51,6 @@ SoundSequence::SoundSequence(void* fileData, size_t fileSize) {
     auto labelOff = label->labelOffs.elems[i];
     auto seqLabel = getOffsetT<SeqLabel>(labelBase, labelOff);
     if (falseEndian) seqLabel->bswap();
-    // TODO: byteswap seq data if needed
   }
 }
 }

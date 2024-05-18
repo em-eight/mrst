@@ -202,7 +202,7 @@ class MidiTrack {
 
 class MidiFile {
  public:
-  MidiFile(rsnd::SoundSequence *assocSeq);
+  MidiFile(const rsnd::SoundSequence *assocSeq);
   ~MidiFile();
   MidiTrack *AddTrack();
   MidiTrack *InsertTrack(uint32_t trackNum);
@@ -218,7 +218,7 @@ class MidiFile {
   //bool bAddedTimeSig;
 
  public:
-  rsnd::SoundSequence *assocSeq;
+  const rsnd::SoundSequence *assocSeq;
   uint16_t ppqn;
 
   std::vector<MidiTrack *> aTracks;

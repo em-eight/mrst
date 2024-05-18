@@ -61,4 +61,6 @@ struct DataRef {
 inline void* getOffset(void* ptr, u32 offset) { return reinterpret_cast<u8*>(ptr) + offset; }
 template<typename T>
 inline T* getOffsetT(void* ptr, u32 offset) { return reinterpret_cast<T*>(reinterpret_cast<u8*>(ptr) + offset); }
+template<typename T>
+inline const T* getOffsetT(const void* ptr, u32 offset) { return reinterpret_cast<const T*>(reinterpret_cast<const u8*>(ptr) + offset); }
 }
