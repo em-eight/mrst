@@ -8,6 +8,7 @@
 #include <vector>
 #include <list>
 #include <cstdint>
+#include <filesystem>
 
 #include "rsnd/SoundSequence.hpp"
 
@@ -211,7 +212,7 @@ class MidiFile {
   uint32_t GetPPQN() const;
   void WriteMidiToBuffer(std::vector<uint8_t> &buf);
   void Sort(void);
-  bool SaveMidiFile(const std::string &filepath);
+  bool SaveMidiFile(const std::filesystem::path &filepath);
 
  protected:
   //bool bAddedTempo;

@@ -23,12 +23,14 @@ Decodes file into modern standard format. BRSTM/BRWAV files are converted to WAV
 | File   | list | extract | decode |
 | :---   | :--: | :-----: | :----: |
 | BRSAR  | Y    | Y       | N/A    |
-| BRWAR  | N    | Y       | N/A    |
-| BRWAV  | N    | N/A     | Y      |
-| BRSTM  | N    | N/A     | Y      |
+| BRWAR  | Y    | Y       | N/A    |
+| BRWAV  | Y    | N/A     | Y      |
+| BRSTM  | Y    | N/A     | Y      |
 | BRBNK  | Y    | N/A     | Y      |
 | BRSEQ  | Y    | N/A     | Y      |
 | BRWSD  | TBA  | N/A     | TBA    |
+
+Although I tried to incorporate all the features of past decoder implementations, MIDI conversion is a work in progress and not all RSEQ behavior can be translated into MIDI.
 
 ## Recommended TODO
 Eventually it would be nice if this tool supported re-converting from common formats to nintendoware (`mrst encode`) and re-packing archives (`mrst archive`).

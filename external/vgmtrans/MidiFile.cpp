@@ -74,7 +74,7 @@ void MidiFile::Sort(void) {
   }
 }
 
-bool MidiFile::SaveMidiFile(const std::string &filepath) {
+bool MidiFile::SaveMidiFile(const std::filesystem::path &filepath) {
   std::vector<uint8_t> midiBuf;
   WriteMidiToBuffer(midiBuf);
   rsnd::writeBinary(filepath, midiBuf.data(), midiBuf.size());

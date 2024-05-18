@@ -5,6 +5,9 @@
 #include "rsnd/SoundArchive.hpp"
 #include "rsnd/SoundBank.hpp"
 #include "rsnd/SoundSequence.hpp"
+#include "rsnd/SoundStream.hpp"
+#include "rsnd/SoundWave.hpp"
+#include "rsnd/SoundWaveArchive.hpp"
 #include "common/fileUtil.hpp"
 #include "tools/list.hpp"
 
@@ -99,6 +102,31 @@ void rsndListRbnk(const SoundBank& soundBank, CliOpts& cliOpts) {
   }
 }
 
+void rsndListRstm(const SoundStream& soundStream, CliOpts& cliOpts) {
+  const int trackCount = soundStream.trackTable->trackCount;
+  std::cout << "Track count: " << trackCount << '\n';
+  std::cout << "Sample rate: " << (int)soundStream.strmDataInfo->sampleRate << '\n';
+  std::cout << "Sample count: " << (int)soundStream.getSampleCount() << '\n';
+
+  for (int i = 0; i < trackCount; i++) {
+    std::cout << "Track " << std::to_string(i) << '\n';
+    u8 chCount = soundStream.getTrackInfoType() == TrackTable::EXTENDED ?
+                soundStream.getTrackInfoExtended(i)->channelCount :
+                soundStream.getTrackInfoSimple(i)->channelCount;
+    std::cout << "\t# channels: " << (int)chCount << '\n';
+  }
+}
+
+void rsndListRwav(const SoundWave& soundWave, CliOpts& cliOpts) {
+  std::cout << "Channel count: " << (int)soundWave.getChannelCount() << '\n';
+  std::cout << "Sample rate: " << (int)soundWave.info->sampleRate << '\n';
+  std::cout << "Sample count: " << (int)soundWave.getTrackSampleCount() << '\n';
+}
+
+void rsndListRwar(const SoundWaveArchive& soundArchive, CliOpts& cliOpts) {
+  std::cout << "WAVE count: " << (int)soundArchive.getWaveCount() << '\n';
+}
+
 void rsndListRseq(const SoundSequence& soundSeq, CliOpts& cliOpts) {
   const int labelCount = soundSeq.label->labelOffs.size;
   std::cout << "Label count: " << labelCount << '\n';
@@ -128,6 +156,21 @@ void rsndList(CliOpts& cliOpts) {
   } case FMT_BRSEQ: {
     SoundSequence soundSeq(inputData, inputSize);
     rsndListRseq(soundSeq, cliOpts);
+    break;
+
+  } case FMT_BRSTM: {
+    SoundStream soundStream(inputData, inputSize);
+    rsndListRstm(soundStream, cliOpts);
+    break;
+
+  } case FMT_BRWAV: {
+    SoundWave soundWave(inputData, inputSize);
+    rsndListRwav(soundWave, cliOpts);
+    break;
+
+  } case FMT_BRWAR: {
+    SoundWaveArchive soundArchive(inputData, inputSize);
+    rsndListRwar(soundArchive, cliOpts);
     break;
 
   } default:
