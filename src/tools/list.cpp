@@ -39,12 +39,90 @@ void rsndListRsarBanks(const SoundArchive& soundArchive, CliOpts& cliOpts) {
   }
 }
 
+std::string rseqShortDesc(const SoundArchive& soundArchive, const SeqSoundInfo* seqSoundInfo) {
+  std::string desc;
+  const BankInfo* bankInfo = soundArchive.getBankInfo(seqSoundInfo->bankIdx);
+  const char* name = soundArchive.getString(bankInfo->fileNameIdx);
+  if (name) {
+    desc += name;
+  } else {
+    desc += "<anonymous bank>";
+  }
+  return "off: " + std::to_string(seqSoundInfo->offset) + ", " + desc;
+}
+
+std::string rstmShortDesc(const SoundArchive& SoundArchive, const StrmSoundInfo* strmSoundInfo) {
+  return "+" + std::to_string(strmSoundInfo->startPos);
+}
+
+std::string rwsdShortDesc(const SoundArchive& SoundArchive, const WsdSoundInfo* wsdSoundInfo) {
+  return "#" + std::to_string(wsdSoundInfo->idx);
+}
+
+void rsndListRsarSounds(const SoundArchive& soundArchive, CliOpts& cliOpts) {
+  SoundTable* soundTable = soundArchive.soundTable;
+  for (int i = 0; i < soundTable->size; i++) {
+    const SoundInfoEntry* soundInfo = soundArchive.getSoundInfo(i);
+    const char* name = soundArchive.getString(soundInfo->fileNameIdx);
+    const char* typeStr;
+    std::string description;
+    switch (soundInfo->soundType)
+    {
+    case SoundInfoEntry::TYPE_SEQ:
+      typeStr = "SEQ";
+      description = rseqShortDesc(soundArchive, soundArchive.getSeqSoundInfo(soundInfo));
+      break;
+    
+    case SoundInfoEntry::TYPE_STRM:
+      typeStr = "STRM";
+      description = rstmShortDesc(soundArchive, soundArchive.getStrmSoundInfo(soundInfo));
+      break;
+    
+    case SoundInfoEntry::TYPE_WAVE:
+      typeStr = "WAVE";
+      description = rwsdShortDesc(soundArchive, soundArchive.getWsdSoundInfo(soundInfo));
+      break;
+    
+    default:
+      typeStr = "UNK";
+      description = "";
+      break;
+    }
+    if (name) {
+      std::cout << i << ") " << name << " | " << typeStr << " | " << description << '\n';
+    } else {
+      std::cout << i << ") " << "<anonymous sound>" << '\n';
+    }
+
+    const FileInfo* fileInfo = soundArchive.getFileInfo(soundInfo->fileIdx);
+    if (soundArchive.isFileExternal(soundInfo->fileIdx)) {
+      std::cout << '\t' << soundArchive.getFileExternalPath(soundInfo->fileIdx) << '\n';
+    } else {
+      const FileGroupInfo* fileGroupInfo = soundArchive.getFileGroupInfo(soundInfo->fileIdx);
+      int instanceCount = fileGroupInfo->size;
+      for (int j = 0; j < instanceCount; j++) {
+        const FileGroup* fileGroup = soundArchive.getFileGroup(soundInfo->fileIdx, j);
+        const GroupInfo* group = soundArchive.getGroupInfo(fileGroup->groupIdx);
+        const char* name = soundArchive.getString(group->nameIdx);
+        if (name) {
+          std::cout << '\t' << name << ":" << fileGroup->idx << '\n';
+        } else {
+          std::cout << '\t' << "<anonymous group>" << ":" << fileGroup->idx << '\n';
+        }
+      }
+    }
+  }
+}
+
 void rsndListRsar(const SoundArchive& soundArchive, CliOpts& cliOpts) {
   if (cliOpts.listOpts.groups) {
     rsndListRsarGroups(soundArchive, cliOpts);
   }
   if (cliOpts.listOpts.banks) {
     rsndListRsarBanks(soundArchive, cliOpts);
+  }
+  if (cliOpts.listOpts.sounds) {
+    rsndListRsarSounds(soundArchive, cliOpts);
   }
 }
 

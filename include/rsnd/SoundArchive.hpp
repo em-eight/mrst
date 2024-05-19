@@ -68,9 +68,9 @@ struct SoundArchiveInfo : public BinaryBlockHeader {
 typedef Array<DataRef> SoundTable;
 
 struct SoundInfoEntry {
-  static const u8 TYPE_SEQ = 0;
-  static const u8 TYPE_STRM = 1;
-  static const u8 TYPE_WAVE = 2;
+  static const u8 TYPE_SEQ = 1;
+  static const u8 TYPE_STRM = 2;
+  static const u8 TYPE_WAVE = 3;
 
   u32 fileNameIdx;
   u32 fileIdx;
@@ -87,6 +87,38 @@ struct SoundInfoEntry {
   u8 panCurve;
   u8 actorPlayerId;
   u8 _2a;
+
+  void bswap();
+};
+
+struct SeqSoundInfo {
+  u32 offset;
+  u32 bankIdx;
+  u32 _8;
+  u8 _c;
+  u8 _d;
+  u8 _e[2];
+  u32 _10;
+
+  void bswap();
+};
+
+struct WsdSoundInfo {
+  u32 idx;
+  u32 _4;
+  u8 _8;
+  u8 _9;
+  u8 _a[2];
+  u32 _c;
+
+  void bswap();
+};
+
+struct StrmSoundInfo {
+  u32 startPos;
+  u16 _4;
+  u16 _6;
+  u32 _8;
 
   void bswap();
 };
@@ -247,5 +279,9 @@ public:
   bool isGroupExternal(u32 groupIdx) const { return getGroupExternalPath(groupIdx) != nullptr; }
 
   const BankInfo* getBankInfo(u32 idx) const { return static_cast<BankInfo*>(bankTable->elems[idx].getAddr(infoBase)); }
+  
+  const SeqSoundInfo* getSeqSoundInfo(const SoundInfoEntry* soundInfo) const { return soundInfo->extendedInfoRef.getAddr<SeqSoundInfo>(infoBase); }
+  const WsdSoundInfo* getWsdSoundInfo(const SoundInfoEntry* soundInfo) const { return soundInfo->extendedInfoRef.getAddr<WsdSoundInfo>(infoBase); }
+  const StrmSoundInfo* getStrmSoundInfo(const SoundInfoEntry* soundInfo) const { return soundInfo->extendedInfoRef.getAddr<StrmSoundInfo>(infoBase); }
 };
 }

@@ -65,6 +65,8 @@ CliOpts parseArgs(int argc, char** argv) {
       cliOpts.listOpts.groups = true;
     } else if (strcmp(argv[i], "--banks") == 0) {
       cliOpts.listOpts.banks = true;
+    } else if (strcmp(argv[i], "--sounds") == 0) {
+      cliOpts.listOpts.sounds = true;
     } else {
       cliOpts.inputFile = argv[i];
     }

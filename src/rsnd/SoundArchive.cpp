@@ -61,6 +61,26 @@ void SoundInfoEntry::bswap() {
   _24 = std::byteswap(_24);
 }
 
+void SeqSoundInfo::bswap() {
+  offset = std::byteswap(offset);
+  bankIdx = std::byteswap(bankIdx);
+  _8 = std::byteswap(_8);
+  _10 = std::byteswap(_10);
+}
+
+void WsdSoundInfo::bswap() {
+  idx = std::byteswap(idx);
+  _4 = std::byteswap(_4);
+  _c = std::byteswap(_c);
+}
+
+void StrmSoundInfo::bswap() {
+  startPos = std::byteswap(startPos);
+  _4 = std::byteswap(_4);
+  _6 = std::byteswap(_6);
+  _8 = std::byteswap(_8);
+}
+
 void BankInfo::bswap() {
   fileNameIdx = std::byteswap(fileNameIdx);
   fileIdx = std::byteswap(fileIdx);
@@ -207,6 +227,28 @@ SoundArchive::SoundArchive(void* fileData, size_t fileSize) {
   for (int i = 0; i < soundTable->size; i++) {
     SoundInfoEntry* soundInfoEntry = static_cast<SoundInfoEntry*>(soundTable->elems[i].getAddr(infoBase));
     soundInfoEntry->bswap();
+
+    switch (soundInfoEntry->soundType)
+    {
+    case SoundInfoEntry::TYPE_SEQ: {
+      SeqSoundInfo* seqSoundInfo = soundInfoEntry->extendedInfoRef.getAddr<SeqSoundInfo>(infoBase);
+      seqSoundInfo->bswap();
+      break;
+    
+    } case SoundInfoEntry::TYPE_WAVE: {
+      WsdSoundInfo* wsdSoundInfo = soundInfoEntry->extendedInfoRef.getAddr<WsdSoundInfo>(infoBase);
+      wsdSoundInfo->bswap();
+      break;
+    
+    } case SoundInfoEntry::TYPE_STRM: {
+      StrmSoundInfo* strmSoundInfo = soundInfoEntry->extendedInfoRef.getAddr<StrmSoundInfo>(infoBase);
+      strmSoundInfo->bswap();
+      break;
+    
+    } default:
+      std::cerr << "Warning: Unknown sound type " << soundInfoEntry->soundType << '\n';
+      break;
+    }
   }
 }
 
