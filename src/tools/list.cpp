@@ -8,6 +8,7 @@
 #include "rsnd/SoundStream.hpp"
 #include "rsnd/SoundWave.hpp"
 #include "rsnd/SoundWaveArchive.hpp"
+#include "rsnd/SoundWsd.hpp"
 #include "common/fileUtil.hpp"
 #include "tools/list.hpp"
 
@@ -137,6 +138,22 @@ void rsndListRseq(const SoundSequence& soundSeq, CliOpts& cliOpts) {
   }
 }
 
+void rsndListRwsd(const SoundWsd& soundWsd, CliOpts& cliOpts) {
+  int wsdCount = soundWsd.getWsdCount();
+  std::cout << "Sound count: " << wsdCount << '\n';
+  for (int i = 0; i < wsdCount; i++) {
+    const Wsd* wsd = soundWsd.getWsd(i);
+    int trackCount = soundWsd.getTrackCount(wsd);
+    std::cout << "\t" << i << ") " << trackCount << " tracks" << '\n';
+  }
+
+  if (soundWsd.containsWaveInfo) {
+
+  } else {
+    std::cout << "WSD file does not embed any WAVE info\n";
+  }
+}
+
 void rsndList(CliOpts& cliOpts) {
   size_t inputSize;
   void* inputData = readBinary(cliOpts.inputFile, inputSize);
@@ -171,6 +188,11 @@ void rsndList(CliOpts& cliOpts) {
   } case FMT_BRWAR: {
     SoundWaveArchive soundArchive(inputData, inputSize);
     rsndListRwar(soundArchive, cliOpts);
+    break;
+
+  } case FMT_BRWSD: {
+    SoundWsd soundWsd(inputData, inputSize);
+    rsndListRwsd(soundWsd, cliOpts);
     break;
 
   } default:

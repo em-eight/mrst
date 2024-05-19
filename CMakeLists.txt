@@ -21,6 +21,7 @@ set(RSND_SRC ${sources}
     src/rsnd/SoundBank.cpp
     src/rsnd/SoundStream.cpp
     src/rsnd/SoundSequence.cpp
+    src/rsnd/SoundWsd.cpp
 
     src/common/util.cpp
     src/common/fileUtil.cpp

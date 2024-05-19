@@ -64,3 +64,4 @@ inline T* getOffsetT(void* ptr, u32 offset) { return reinterpret_cast<T*>(reinte
 template<typename T>
 inline const T* getOffsetT(const void* ptr, u32 offset) { return reinterpret_cast<const T*>(reinterpret_cast<const u8*>(ptr) + offset); }
 }
+f32 bswap_float(const float inFloat);

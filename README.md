@@ -13,8 +13,8 @@ Prints various information about the file
 ### `mrst extract` subcommand
 Extracts files from archive (BRSAR or BRWAR)
 
-`--decode` additionally decodes subfiles while extracting
-`--extract-rwar` For BRSAR extraction, automatically extract any BRWARs encountered
+- `--decode` additionally decodes subfiles while extracting
+- `--extract-rwar` For BRSAR extraction, automatically extract any BRWARs encountered
 
 ### `mrst decode` subcommand
 Decodes file into modern standard format. BRSTM/BRWAV files are converted to WAVE, BRBNK (and corresponding RWAR if applicable) files are converted to SoundFont 2 (sf2) and BRSEQ files are converted to MIDI.
@@ -28,7 +28,7 @@ Decodes file into modern standard format. BRSTM/BRWAV files are converted to WAV
 | BRSTM  | Y    | N/A     | Y      |
 | BRBNK  | Y    | N/A     | Y      |
 | BRSEQ  | Y    | N/A     | Y      |
-| BRWSD  | TBA  | N/A     | TBA    |
+| BRWSD  | Y    | N/A     | N/A    |
 
 Although I tried to incorporate all the features of past decoder implementations, MIDI conversion is a work in progress and not all RSEQ behavior can be translated into MIDI.
 
