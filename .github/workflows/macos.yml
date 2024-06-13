@@ -1,0 +1,33 @@
+# Build and push artifacts
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-push:
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: CMake generate
+      env:
+        ARTIFACT_NAME: mrst-${{ runner.os }}
+      run: |
+        cmake -B build \
+          -DCMAKE_INSTALL_PREFIX=$ARTIFACT_NAME \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DBUILD_TESTING=OFF \
+          -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+      shell: bash
+    - name: Build
+      run: cmake --build build --target install -j
+    
+    - uses: actions/upload-artifact@v3
+      if: github.ref == 'refs/heads/main' && github.repository == 'em-eight/mrst'
+      with:
+        name: mrst-${{ runner.os }}
+        path: mrst-${{ runner.os }}
