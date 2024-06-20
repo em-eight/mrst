@@ -7,6 +7,7 @@
 #include "rsnd/SoundArchive.hpp"
 #include "rsnd/SoundWaveArchive.hpp"
 #include "rsnd/SoundBank.hpp"
+#include "rsnd/SoundWsd.hpp"
 #include "rsnd/soundCommon.hpp"
 #include "common/cli.h"
 #include "common/fileUtil.hpp"
@@ -52,11 +53,6 @@ void extract_brsar_sounds(const SoundArchive& soundArchive, const CliOpts& cliOp
 }
 
 void extract_rbnk_sf2(const std::filesystem::path filepath, void* fileData, size_t fileSize, void* waveData, size_t waveSize) {
-  if (waveSize <= 0) {
-    std::cerr << "Err: RBNK with embeddded wave files not yet supported\n";
-    return;
-  }
-  
   SoundBank soundBank(fileData, fileSize);
   std::vector<WaveAudio> waveAudios;
   if (soundBank.containsWaves) {
@@ -73,6 +69,14 @@ void extract_rbnk_sf2(const std::filesystem::path filepath, void* fileData, size
 
   SF2File sf2file(&soundBank, waveAudios);
   sf2file.SaveSF2File(filepath);
+}
+
+void extract_rwsd_embedded_wav(const std::filesystem::path filepath, const SoundWsd& soundWsd, void* waveData, size_t waveSize) {
+  std::filesystem::create_directories(filepath);
+
+  for (int i = 0; i < soundWsd.getWaveInfoCount(); i++) {
+    soundWsd.trackToWaveFile(i, waveData, filepath / (std::to_string(i) + ".wav"));
+  }
 }
 
 void extract_brsar_groups(const SoundArchive& soundArchive, const CliOpts& cliOpts) {
@@ -110,6 +114,12 @@ void extract_brsar_groups(const SoundArchive& soundArchive, const CliOpts& cliOp
       // write sf2 file for RBNK
       if (fileFormat == FMT_BRBNK && cliOpts.extractOpts.decode) {
         extract_rbnk_sf2(subGroupPath / "soundfont.sf2", fileData, fileSize, waveData, waveSize);
+      }
+
+      // for RWSD files in the old RSAR format, extract any embedded wave files
+      if (fileFormat == FMT_BRWSD && cliOpts.extractOpts.decode && detectFileFormat("", waveData, waveSize) != FMT_BRWAR && waveSize > 0) {
+        SoundWsd soundWsd(fileData, fileSize);
+        extract_rwsd_embedded_wav(subGroupPath / "wave", soundWsd, waveData, waveSize);
       }
 
       // write wave data

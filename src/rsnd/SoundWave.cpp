@@ -20,15 +20,6 @@ void SoundWaveInfo::bswap() {
   this->WaveInfo::bswap();
 }
 
-void SoundWaveChannelInfo::bswap() {
-  dataOffset = std::byteswap(dataOffset);
-  adpcmOffset = std::byteswap(adpcmOffset);
-  frontLeftVolume = std::byteswap(frontLeftVolume);
-  frontRightVolume = std::byteswap(frontRightVolume);
-  backLeftVolume = std::byteswap(backLeftVolume);
-  backRightVolume = std::byteswap(backRightVolume);
-}
-
 SoundWave::SoundWave(void* fileData, size_t fileSize) {
   dataSize = fileSize;
   data = fileData;

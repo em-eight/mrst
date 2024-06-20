@@ -7,6 +7,17 @@
 
 namespace rsnd {
 
+struct SoundWaveChannelInfo {
+  u32 dataOffset;
+  u32 adpcmOffset;
+  u32 frontLeftVolume;
+  u32 frontRightVolume;
+  u32 backLeftVolume;
+  u32 backRightVolume;
+
+  void bswap();
+};
+
 struct AdpcmParam {
   s16 coeffs[16];
   u16 gain;

@@ -21,17 +21,6 @@ struct SoundWaveInfo : public BinaryBlockHeader, public WaveInfo {
   void bswap();
 };
 
-struct SoundWaveChannelInfo {
-  u32 dataOffset;
-  u32 adpcmOffset;
-  u32 frontLeftVolume;
-  u32 frontRightVolume;
-  u32 backLeftVolume;
-  u32 backRightVolume;
-
-  void bswap();
-};
-
 typedef BinaryBlockHeader SoundWaveData;
 
 class SoundWave {

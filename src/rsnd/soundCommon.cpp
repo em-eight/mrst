@@ -8,6 +8,15 @@
 #include "common/util.h"
 
 namespace rsnd {
+void SoundWaveChannelInfo::bswap() {
+  dataOffset = std::byteswap(dataOffset);
+  adpcmOffset = std::byteswap(adpcmOffset);
+  frontLeftVolume = std::byteswap(frontLeftVolume);
+  frontRightVolume = std::byteswap(frontRightVolume);
+  backLeftVolume = std::byteswap(backLeftVolume);
+  backRightVolume = std::byteswap(backRightVolume);
+}
+
 void AdpcmParam::bswap() {
   for (int i = 0; i < 16; i++) {
     coeffs[i] = std::byteswap(coeffs[i]);

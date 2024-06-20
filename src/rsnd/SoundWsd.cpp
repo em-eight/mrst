@@ -1,5 +1,6 @@
 
 #include "rsnd/SoundWsd.hpp"
+#include "common/fileUtil.hpp"
 
 namespace rsnd {
 void WsdHeader::bswap() {
@@ -49,11 +50,24 @@ void NoteInformationEntry::bswap() {
   _res = std::byteswap(_res);
 }
 
+void WsdWave::bswap() {
+  this->BinaryBlockHeader::bswap();
+  waveInfos.bswap();
+}
+
+void WsdWaveOld::bswap() {
+  this->BinaryBlockHeader::bswap();
+  int count = (this->length - 8) / sizeof(u32);
+  for (int i = 0; i < count; i++) {
+    this->elems[i] = std::byteswap(this->elems[i]);
+  }
+}
+
 SoundWsd::SoundWsd(void* fileData, size_t fileSize) {
   dataSize = fileSize;
   data = fileData;
 
-  WsdHeader* wsdHdr = static_cast<WsdHeader*>(fileData);
+  wsdHdr = static_cast<WsdHeader*>(fileData);
   bool falseEndian = wsdHdr->byteOrder != 0xFEFF;
   if (falseEndian) wsdHdr->bswap();
 
@@ -63,9 +77,39 @@ SoundWsd::SoundWsd(void* fileData, size_t fileSize) {
   
   containsWaveInfo = wsdHdr->waveOffset != 0;
   if (containsWaveInfo) {
-    wsdWave = getOffsetT<WsdWave>(data, wsdHdr->waveOffset);
-    if (falseEndian) wsdWave->bswap();
-    waveBase = getOffset(wsdWave, sizeof(BinaryBlockHeader));
+    wsdWave = getOffsetT<void>(data, wsdHdr->waveOffset);
+
+    u32* waveInfoOffs;
+    u32 waveInfoCount;
+    if (wsdHdr->version >= SoundWsd::FILE_VERSION_NEW_WAVE_BLOCK) {
+      WsdWave* waveNew = static_cast<WsdWave*>(wsdWave);
+      if (falseEndian) waveNew->bswap();
+
+      waveInfoOffs = waveNew->waveInfos.elems;
+      waveInfoCount = waveNew->waveInfos.size;
+    } else {
+      WsdWaveOld* waveOld = static_cast<WsdWaveOld*>(wsdWave);
+      if (falseEndian) waveOld->bswap();
+
+      waveInfoOffs = waveOld->elems;
+      waveInfoCount = (waveOld->length - 8) / sizeof(u32);
+    }
+    waveBase = getOffset(wsdWave, 0);
+
+    for (int i = 0; i < waveInfoCount; i++) {
+      WaveInfo* waveInfo = getOffsetT<WaveInfo>(waveBase, waveInfoOffs[i]);
+      if (falseEndian) waveInfo->bswap();
+
+      u32* channelInfoOffsets = getOffsetT<u32>(waveInfo, waveInfo->channelInfoTableOffset);
+      for (int j = 0; j < waveInfo->channelCount; j++) {
+        if (falseEndian) channelInfoOffsets[j] = std::byteswap(channelInfoOffsets[j]);
+        SoundWaveChannelInfo* chInfo = getOffsetT<SoundWaveChannelInfo>(waveInfo, channelInfoOffsets[j]);
+        if (falseEndian) chInfo->bswap();
+
+        AdpcParams* adpcParams = getOffsetT<AdpcParams>(waveInfo, chInfo->adpcmOffset);
+        if (falseEndian) adpcParams->bswap();
+      }
+    }
   } else {
     wsdWave = nullptr;
   }
@@ -98,5 +142,28 @@ SoundWsd::SoundWsd(void* fileData, size_t fileSize) {
       if (falseEndian) noteInformationEntry->bswap();
     }
   }
+}
+
+void SoundWsd::trackToWaveFile(u8 trackIdx, void* waveData, std::filesystem::path wavePath) const {
+  const WaveInfo* waveInfo = getWaveInfo(trackIdx);
+  u32 channelCount = waveInfo->channelCount;
+    
+  u32 loopStart = dspAddressToSamples(waveInfo->loopStart);
+  u32 loopEnd = dspAddressToSamples(waveInfo->loopEnd);
+  u32 sampleBufferSize = channelCount * loopEnd * sizeof(s16);
+  s16* pcmBuffer = static_cast<s16*>(malloc(sampleBufferSize));
+
+  for (int j = 0; j < waveInfo->channelCount; j++) {
+    const SoundWaveChannelInfo* chInfo = getChannelInfo(waveInfo, j);
+    const AdpcParams* adpcParams = getAdpcParams(waveInfo, chInfo);
+
+    const u8* blockData = (const u8*)waveData + waveInfo->dataLoc + chInfo->dataOffset;
+
+    decodeBlock(blockData, loopEnd, pcmBuffer + j, channelCount, waveInfo->format, adpcParams);
+  }
+
+  createWaveFile(wavePath, pcmBuffer, loopEnd, waveInfo->sampleRate, channelCount);
+
+  free(pcmBuffer);
 }
 }

@@ -13,6 +13,26 @@
 #include "tools/list.hpp"
 
 namespace rsnd {
+void rsndListFileInfo(const SoundArchive& soundArchive, int fileIdx) {
+  const FileInfo* fileInfo = soundArchive.getFileInfo(fileIdx);
+  if (soundArchive.isFileExternal(fileIdx)) {
+    std::cout << '\t' << soundArchive.getFileExternalPath(fileIdx) << '\n';
+  } else {
+    const FileGroupInfo* fileGroupInfo = soundArchive.getFileGroupInfo(fileIdx);
+    int instanceCount = fileGroupInfo->size;
+    for (int j = 0; j < instanceCount; j++) {
+      const FileGroup* fileGroup = soundArchive.getFileGroup(fileIdx, j);
+      const GroupInfo* group = soundArchive.getGroupInfo(fileGroup->groupIdx);
+      const char* name = soundArchive.getString(group->nameIdx);
+      if (name) {
+        std::cout << '\t' << name << ":" << fileGroup->idx << '\n';
+      } else {
+        std::cout << '\t' << "<anonymous group>" << ":" << fileGroup->idx << '\n';
+      }
+    }
+  }
+}
+
 void rsndListRsarGroups(const SoundArchive& soundArchive, CliOpts& cliOpts) {
   GroupTable* groupTable = soundArchive.groupTable;
   for (int i = 0; i < groupTable->size; i++) {
@@ -32,10 +52,11 @@ void rsndListRsarBanks(const SoundArchive& soundArchive, CliOpts& cliOpts) {
     const BankInfo* bankInfo = soundArchive.getBankInfo(i);
     const char* name = soundArchive.getString(bankInfo->fileNameIdx);
     if (name) {
-      std::cout << name << '\n';
+      std::cout << i << ") " << name << '\n';
     } else {
-      std::cout << "<anonymous bank>" << '\n';
+      std::cout << i << ") " << "<anonymous bank>" << '\n';
     }
+    rsndListFileInfo(soundArchive, bankInfo->fileIdx);
   }
 }
 
@@ -94,23 +115,7 @@ void rsndListRsarSounds(const SoundArchive& soundArchive, CliOpts& cliOpts) {
       std::cout << i << ") " << "<anonymous sound>" << '\n';
     }
 
-    const FileInfo* fileInfo = soundArchive.getFileInfo(soundInfo->fileIdx);
-    if (soundArchive.isFileExternal(soundInfo->fileIdx)) {
-      std::cout << '\t' << soundArchive.getFileExternalPath(soundInfo->fileIdx) << '\n';
-    } else {
-      const FileGroupInfo* fileGroupInfo = soundArchive.getFileGroupInfo(soundInfo->fileIdx);
-      int instanceCount = fileGroupInfo->size;
-      for (int j = 0; j < instanceCount; j++) {
-        const FileGroup* fileGroup = soundArchive.getFileGroup(soundInfo->fileIdx, j);
-        const GroupInfo* group = soundArchive.getGroupInfo(fileGroup->groupIdx);
-        const char* name = soundArchive.getString(group->nameIdx);
-        if (name) {
-          std::cout << '\t' << name << ":" << fileGroup->idx << '\n';
-        } else {
-          std::cout << '\t' << "<anonymous group>" << ":" << fileGroup->idx << '\n';
-        }
-      }
-    }
+    rsndListFileInfo(soundArchive, soundInfo->fileIdx);
   }
 }
 
