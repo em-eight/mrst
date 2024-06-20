@@ -66,6 +66,21 @@ SoundBank::SoundBank(void* fileData, size_t fileSize) {
     bankWave = getOffsetT<SoundBankWave>(data, bnkHdr->waveOffset);
     if (falseEndian) bankWave->bswap();
     waveBase = getOffset(bankWave, sizeof(BinaryBlockHeader));
+
+    for (int i = 0; i < bankWave->waveInfos.size; i++) {
+      WaveInfo* waveInfo = bankWave->waveInfos.elems[i].getAddr<WaveInfo>(waveBase);
+      if (falseEndian) waveInfo->bswap();
+
+      u32* channelInfoOffsets = getOffsetT<u32>(waveInfo, waveInfo->channelInfoTableOffset);
+      for (int j = 0; j < waveInfo->channelCount; j++) {
+        if (falseEndian) channelInfoOffsets[j] = std::byteswap(channelInfoOffsets[j]);
+        SoundWaveChannelInfo* chInfo = getOffsetT<SoundWaveChannelInfo>(waveInfo, channelInfoOffsets[j]);
+        if (falseEndian) chInfo->bswap();
+
+        AdpcParams* adpcParams = getOffsetT<AdpcParams>(waveInfo, chInfo->adpcmOffset);
+        if (falseEndian) adpcParams->bswap();
+      }
+    }
   } else {
     bankWave = nullptr;
   }

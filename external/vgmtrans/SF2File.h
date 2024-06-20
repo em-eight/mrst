@@ -4,6 +4,7 @@
 
 #include "common.h"
 #include "RiffFile.h"
+#include "WaveAudio.h"
 
 #include "rsnd/SoundBank.hpp"
 #include "rsnd/SoundWave.hpp"
@@ -280,7 +281,7 @@ class SynthFile;
 
 class SF2File: public RiffFile {
  public:
-  SF2File(const rsnd::SoundBank *bankfile, const std::vector<rsnd::SoundWave>& waves);
+  SF2File(const rsnd::SoundBank *bankfile, const std::vector<WaveAudio>& waves);
   ~SF2File() override = default;
 
   std::vector<uint8_t> SaveToMem();

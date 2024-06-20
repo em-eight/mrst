@@ -80,7 +80,7 @@ struct SoundBankData : public BinaryBlockHeader {
 };
 
 struct SoundBankWave : public BinaryBlockHeader {
-  // references to SoundWaveInfo
+  // references to WaveInfo
   Array<DataRef> waveInfos;
 
   void bswap();
@@ -118,9 +118,19 @@ public:
   bool containsWaves;
 
   SoundBank(void* fileData, size_t fileSize);
+
   DataRef* getSubregionRef(const DataRef* ref, int idx) const;
   u32 getInstrCount() const { return bankData->instrs.size; }
   InstrInfo* getInstrInfo(int progIdx, int key, int velocity);
   std::vector<InstrumentRegion> getInstrRegions(int progIdx) const;
+
+  const WaveInfo* getWaveInfo(int i) const { return bankWave->waveInfos.elems[i].getAddr<WaveInfo>(waveBase); }
+  int getWaveInfoCount() const { return bankWave->waveInfos.size; }
+  const SoundWaveChannelInfo* getChannelInfo(const WaveInfo* waveInfo, int i) const { 
+    const u32* channelInfoOffsets = getOffsetT<u32>(waveInfo, waveInfo->channelInfoTableOffset);
+    return getOffsetT<SoundWaveChannelInfo>(waveInfo, channelInfoOffsets[i]);
+  }
+  int getChannelCount(const WaveInfo* waveInfo) const { return waveInfo->channelCount; }
+  const AdpcParams* getAdpcParams(const WaveInfo* waveInfo, const SoundWaveChannelInfo* chInfo) const { return getOffsetT<AdpcParams>(waveInfo, chInfo->adpcmOffset); }
 };
 }

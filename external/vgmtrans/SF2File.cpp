@@ -149,7 +149,7 @@ SF2InfoListChunk::SF2InfoListChunk(const std::string& name)
 //  SF2File
 //  *******
 
-SF2File::SF2File(const rsnd::SoundBank *bankfile, const std::vector<rsnd::SoundWave>& waves)
+SF2File::SF2File(const rsnd::SoundBank *bankfile, const std::vector<WaveAudio>& waves)
     : RiffFile("RSND bank", "sfbk") {
 
   //***********
@@ -161,27 +161,21 @@ SF2File::SF2File(const rsnd::SoundBank *bankfile, const std::vector<rsnd::SoundW
   LISTChunk *sdtaCk = new LISTChunk("sdta");
   Chunk *smplCk = new Chunk("smpl");
 
-  if (bankfile->bankWave != nullptr) {
-    std::cerr << "Bank file with embedded waves currently not supported\n";
-    exit(-1);
-  }
-
   // Concatanate all of the samples together and add the result to the smpl chunk data
   size_t numWaves = waves.size();
   smplCk->size = 0;
   for (size_t i = 0; i < numWaves; i++) {
-    const rsnd::SoundWave& rwav = waves[i];
-    smplCk->size += rwav.getTrackSampleBufferSize() + (46 * 2);    // plus the 46 padding samples required by sf2 spec
+    const WaveAudio& wav = waves[i];
+    smplCk->size += wav.dataLength + (46 * 2);    // plus the 46 padding samples required by sf2 spec
   }
   smplCk->data = new uint8_t[smplCk->size];
   uint32_t bufPtr = 0;
   for (size_t i = 0; i < numWaves; i++) {
-    const rsnd::SoundWave& rwav = waves[i];
-    size_t waveSz = rwav.getTrackSampleBufferSize();
+    const WaveAudio& wav = waves[i];
+    size_t waveSz = wav.dataLength;
 
-    void* pcm = rwav.getTrackPcm();
+    void* pcm = wav.data;
     memcpy(smplCk->data + bufPtr, pcm, waveSz);
-    free(pcm);
     memset(smplCk->data + bufPtr + waveSz, 0, 46 * 2);
     bufPtr += waveSz + (46 * 2);        // plus the 46 padding samples required by sf2 spec
   }
@@ -402,7 +396,7 @@ SF2File::SF2File(const rsnd::SoundBank *bankfile, const std::vector<rsnd::SoundW
 
       auto* instrInfo = instrRegion.instrInfo;
       EnvelopeParams envelope = envelopeFromInfo(instrInfo);
-      const rsnd::SoundWave& rwav = waves[instrInfo->waveIdx];
+      const WaveAudio& wav = waves[instrInfo->waveIdx];
 
       // initialAttenuation
       instGenList.sfGenOper = initialAttenuation;
@@ -419,7 +413,7 @@ SF2File::SF2File(const rsnd::SoundBank *bankfile, const std::vector<rsnd::SoundW
 
       // sampleModes
       instGenList.sfGenOper = sampleModes;
-      instGenList.genAmount.wAmount = rwav.info->loop;
+      instGenList.genAmount.wAmount = wav.loop;
       memcpy(igenCk->data + dataPtr, &instGenList, sizeof(sfInstGenList));
       dataPtr += sizeof(sfInstGenList);
 
@@ -503,14 +497,13 @@ SF2File::SF2File(const rsnd::SoundBank *bankfile, const std::vector<rsnd::SoundW
 
   uint32_t sampOffset = 0;
   for (size_t i = 0; i < numSamps; i++) {
-    //SynthWave *wave = synthfile->vWaves[i];
-    const rsnd::SoundWave& rwav = waves[i];
+    const WaveAudio& wav = waves[i];
     std::string waveName = "wav" + std::to_string(i);
 
     sfSample samp{};
     memcpy(samp.achSampleName, waveName.c_str(), std::min(waveName.length(), static_cast<size_t>(20)));
     samp.dwStart = sampOffset;
-    samp.dwEnd = samp.dwStart + (rwav.getTrackSampleBufferSize() / sizeof(uint16_t));
+    samp.dwEnd = samp.dwStart + (wav.dataLength / sizeof(uint16_t));
     sampOffset = samp.dwEnd + 46;        // plus the 46 padding samples required by sf2 spec
 
     // Search through all regions for an associated sampInfo structure with this sample
@@ -536,9 +529,9 @@ SF2File::SF2File(const rsnd::SoundBank *bankfile, const std::vector<rsnd::SoundW
     }
     assert (instrInfo != NULL);
 
-    samp.dwStartloop = samp.dwStart + rwav.getLoopStart();
-    samp.dwEndloop = samp.dwStart + rwav.getLoopEnd();
-    samp.dwSampleRate = rwav.info->sampleRate;
+    samp.dwStartloop = samp.dwStart + wav.loopStart;
+    samp.dwEndloop = samp.dwStart + wav.loopEnd;
+    samp.dwSampleRate = wav.sampleRate;
     samp.byOriginalKey = static_cast<uint8_t>(instrInfo->originalKey);
     samp.chCorrection = 0;
     samp.wSampleLink = 0;

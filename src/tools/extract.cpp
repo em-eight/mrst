@@ -14,6 +14,7 @@
 #include "tools/decode.hpp"
 
 #include "vgmtrans/SF2File.h"
+#include "vgmtrans/WaveAudio.h"
 
 using namespace rsnd;
 
@@ -57,15 +58,20 @@ void extract_rbnk_sf2(const std::filesystem::path filepath, void* fileData, size
   }
   
   SoundBank soundBank(fileData, fileSize);
-  SoundWaveArchive waveArchive(waveData, waveSize);
-  std::vector<SoundWave> waves;
-  for (int i = 0; i < waveArchive.getWaveCount(); i++) {
-    size_t rwavSize;
-    void* rwavData = waveArchive.getWaveFile(i, rwavSize);
-    waves.emplace_back(rwavData, rwavSize);
+  std::vector<WaveAudio> waveAudios;
+  if (soundBank.containsWaves) {
+    waveAudios = std::move(toWaveCollection(&soundBank, waveData));
+  } else {
+    SoundWaveArchive waveArchive(waveData, waveSize);
+    for (int i = 0; i < waveArchive.getWaveCount(); i++) {
+      size_t rwavSize;
+      void* rwavData = waveArchive.getWaveFile(i, rwavSize);
+      SoundWave rwav(rwavData, rwavSize);
+      waveAudios.push_back(toWaveAudio(&rwav));
+    }
   }
 
-  SF2File sf2file(&soundBank, waves);
+  SF2File sf2file(&soundBank, waveAudios);
   sf2file.SaveSF2File(filepath);
 }
 
@@ -107,7 +113,7 @@ void extract_brsar_groups(const SoundArchive& soundArchive, const CliOpts& cliOp
       }
 
       // write wave data
-      if (waveSize > 0) {
+      if (waveSize > 0 && detectFileFormat("", waveData, waveSize) == FMT_BRWAR) {
         auto magic = magicLowercase(waveData);
         std::filesystem::path wavePath = subGroupPath / ("wave.b" + magic);
         writeBinary(wavePath, waveData, waveSize);

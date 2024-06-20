@@ -17,27 +17,7 @@ struct SoundWaveHeader : public BinaryFileHeader {
   void bswap();
 };
 
-struct SoundWaveInfo : public BinaryBlockHeader {
-  static const u8 FORMAT_PCM8 = 0;
-  static const u8 FORMAT_PCM16 = 1;
-  static const u8 FORMAT_ADPCM = 2;
-
-  static const u8 LOC_OFFSET = 0;
-  static const u8 LOC_ADDR = 1;
-
-  u8 format;
-  bool loop;
-  u8 channelCount;
-  u8 sampleRate24;
-  u16 sampleRate;
-  u8 dataLocType;
-  u8 _7;
-  u32 loopStart;
-  u32 loopEnd;
-  u32 channelInfoTableOffset;
-  u32 dataLoc;
-  u32 _18;
-
+struct SoundWaveInfo : public BinaryBlockHeader, public WaveInfo {
   void bswap();
 };
 

@@ -29,6 +29,15 @@ void AdpcParams::bswap() {
   paramsLoop.bswap();
 }
 
+void WaveInfo::bswap() {
+  sampleRate = std::byteswap(sampleRate);
+  loopStart = std::byteswap(loopStart);
+  loopEnd = std::byteswap(loopEnd);
+  channelInfoTableOffset = std::byteswap(channelInfoTableOffset);
+  dataLoc = std::byteswap(dataLoc);
+  _18 = std::byteswap(_18);
+}
+
 void decodePcm8Block(const u8* blockData, u32 sampleCount, s16* buffer, u8 stride) {
   for (u32 sampleIndex = 0; sampleIndex < sampleCount; sampleIndex++) {
     buffer[sampleIndex * stride] = (reinterpret_cast<const s8*>(blockData))[sampleIndex];
@@ -79,6 +88,26 @@ void decodeAdpcmBlock(const u8* blockData, u32 sampleCount, const s16 coeffs[16]
 
       buffer[sampleIndex * stride] = cyn1;
     }
+}
+
+void decodeBlock(const u8* blockData, u32 sampleCount, s16* blockBuffer, u8 stride, u8 format, const AdpcParams* adpcParams) {
+  switch (format)
+  {
+  case WaveInfo::FORMAT_PCM8:
+    decodePcm8Block(blockData, sampleCount, blockBuffer, stride);
+    break;
+  
+  case WaveInfo::FORMAT_PCM16:
+    decodePcm16Block(blockData, sampleCount, blockBuffer, stride);
+    break;
+  
+  case WaveInfo::FORMAT_ADPCM:
+    decodeAdpcmBlock(blockData, sampleCount, adpcParams->params.coeffs, adpcParams->params.yn1, adpcParams->params.yn2, blockBuffer, stride);
+    break;
+  
+  default:
+    std::cerr << "Warning: unknown track format " << format << '\n';
+  }
 }
 
 static constexpr u32 BRSAR_MAGIC = MAGIC_FOURCC({'R', 'S', 'A', 'R'});

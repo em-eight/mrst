@@ -35,6 +35,7 @@ set(RSND_SRC ${sources}
     external/vgmtrans/RiffFile.cpp
     external/vgmtrans/SF2File.cpp
     external/vgmtrans/MidiFile.cpp
+    external/vgmtrans/WaveAudio.cpp
 )
 add_library(rsnd ${RSND_SRC})
 target_include_directories(rsnd PUBLIC include external)

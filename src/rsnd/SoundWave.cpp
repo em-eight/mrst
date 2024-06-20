@@ -17,12 +17,7 @@ void SoundWaveHeader::bswap() {
 
 void SoundWaveInfo::bswap() {
   this->BinaryBlockHeader::bswap();
-  sampleRate = std::byteswap(sampleRate);
-  loopStart = std::byteswap(loopStart);
-  loopEnd = std::byteswap(loopEnd);
-  channelInfoTableOffset = std::byteswap(channelInfoTableOffset);
-  dataLoc = std::byteswap(dataLoc);
-  _18 = std::byteswap(_18);
+  this->WaveInfo::bswap();
 }
 
 void SoundWaveChannelInfo::bswap() {
@@ -113,8 +108,6 @@ u32 SoundWave::getTrackSampleCount() const {
   switch (info->format)
   {
   case SoundWaveInfo::FORMAT_PCM8:
-    return info->loopEnd;
-  
   case SoundWaveInfo::FORMAT_PCM16:
     return info->loopEnd;
   
