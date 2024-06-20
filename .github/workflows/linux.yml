@@ -9,21 +9,10 @@ on:
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
     - uses: actions/checkout@v3
-    - name: Set up GCC
-      uses: egor-tensin/setup-gcc@v1
-      with:
-        version: 13
-        platform: x64
-    - name: Configure G++ version
-      run: |
-        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 10
-        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 10
-        sudo update-alternatives --set gcc "/usr/bin/gcc-13"
-        sudo update-alternatives --set g++ "/usr/bin/g++-13"
     - name: CMake generate
       env:
         ARTIFACT_NAME: mrst-${{ runner.os }}
