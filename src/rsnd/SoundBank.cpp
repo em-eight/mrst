@@ -119,7 +119,8 @@ void SoundBank::bswapRegionsRecurse(DataRef& regionRef) {
   } case REGIONSET_NONE: {
     break;
   } default:
-    std::cerr << "Warning: unknown subregion reference " << regionType << '\n';
+    //std::cerr << "Warning: unknown subregion reference " << regionType << '\n';
+    break;
   }
 }
 
@@ -142,7 +143,7 @@ DataRef* SoundBank::getSubregionRef(const DataRef* ref, int idx) const {
   } case REGIONSET_NONE: {
     return nullptr;
   } default:
-    std::cerr << "Warning: unknown subregion reference " << regionType << '\n';
+    //std::cerr << "Warning: unknown subregion reference " << regionType << '\n';
     return nullptr;
   }
   return nullptr;
@@ -192,7 +193,7 @@ std::vector<SoundBank::Subregion> SoundBank::getSubregions(const DataRef* region
   } case REGIONSET_NONE: {
     return {};
   } default:
-    std::cerr << "Warning: unknown subregion reference " << regionType << '\n';
+    //std::cerr << "Warning: unknown subregion reference " << regionType << '\n';
     return {};
   }
 }
