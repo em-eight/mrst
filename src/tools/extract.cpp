@@ -53,7 +53,7 @@ void extract_brsar_sounds(const SoundArchive& soundArchive, const CliOpts& cliOp
 }
 
 void extract_rbnk_sf2(const std::filesystem::path filepath, void* fileData, size_t fileSize, void* waveData, size_t waveSize) {
-  SoundBank soundBank(fileData, fileSize);
+  SoundBank soundBank(fileData, fileSize, waveData);
   std::vector<WaveAudio> waveAudios;
   if (soundBank.containsWaves) {
     waveAudios = std::move(toWaveCollection(&soundBank, waveData));
@@ -118,7 +118,7 @@ void extract_brsar_groups(const SoundArchive& soundArchive, const CliOpts& cliOp
 
       // for RWSD files in the old RSAR format, extract any embedded wave files
       if (fileFormat == FMT_BRWSD && cliOpts.extractOpts.decode && detectFileFormat("", waveData, waveSize) != FMT_BRWAR && waveSize > 0) {
-        SoundWsd soundWsd(fileData, fileSize);
+        SoundWsd soundWsd(fileData, fileSize, waveData);
         extract_rwsd_embedded_wav(subGroupPath / "wave", soundWsd, waveData, waveSize);
       }
 

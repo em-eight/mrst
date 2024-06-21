@@ -10,7 +10,7 @@ std::vector<WaveAudio> toWaveCollection(const rsnd::SoundBank *bankfile, void* w
 
   for (int i = 0; i < bankfile->bankWave->waveInfos.size; i++) {
     const WaveInfo* waveInfo = bankfile->getWaveInfo(i);
-    u32 channelCount = bankfile->getChannelCount(waveInfo);
+    u32 channelCount = waveInfo->channelCount;
       
     u32 loopStart = dspAddressToSamples(waveInfo->loopStart);
     u32 loopEnd = dspAddressToSamples(waveInfo->loopEnd);

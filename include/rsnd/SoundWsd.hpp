@@ -121,7 +121,7 @@ public:
 
   bool containsWaveInfo;
 
-  SoundWsd(void* fileData, size_t fileSize);
+  SoundWsd(void* fileData, size_t fileSize, void* waveData=nullptr);
 
   u32 getWsdCount() const { return wsdData->refs.size; }
   const Wsd* getWsd(u32 i) const { return wsdData->refs.elems[i].getAddr<const Wsd>(dataBase); }

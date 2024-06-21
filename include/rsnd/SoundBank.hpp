@@ -117,7 +117,7 @@ public:
 
   bool containsWaves;
 
-  SoundBank(void* fileData, size_t fileSize);
+  SoundBank(void* fileData, size_t fileSize, void* waveData=nullptr);
 
   DataRef* getSubregionRef(const DataRef* ref, int idx) const;
   u32 getInstrCount() const { return bankData->instrs.size; }

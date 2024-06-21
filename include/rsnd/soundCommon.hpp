@@ -67,9 +67,9 @@ struct WaveInfo {
   void bswap();
 };
 
-inline u32 dspAddressToSamples(u32 dspAddr) {
-  // magic https://github.com/magcius/vgmtrans/blob/8e34ddc2fb43948dc1e1a8759c739a0c1c7b62d7/src/main/formats/RSARInstrSet.cpp#L224
-  return (dspAddr / 16) * 14 + (dspAddr % 16) - 2;
+inline u32 dspAddressToSamples(u32 value) {
+  // magic https://wiki.tockdom.com/wiki/BRWAV
+  return ((7 * value) + 16) / 8;
 }
 
 void decodePcm8Block(const u8* blockData, u32 sampleCount, s16* buffer, u8 stride);

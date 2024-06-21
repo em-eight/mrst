@@ -38,8 +38,10 @@ SoundWave::SoundWave(void* fileData, size_t fileSize) {
     SoundWaveChannelInfo* chInfo = getOffsetT<SoundWaveChannelInfo>(infoBase, channelInfoOffsets[i]);
     if (falseEndian) chInfo->bswap();
 
-    AdpcParams* adpcParams = getOffsetT<AdpcParams>(infoBase, chInfo->adpcmOffset);
-    if (falseEndian) adpcParams->bswap();
+    if (info->format == WaveInfo::FORMAT_ADPCM) {
+      AdpcParams* adpcParams = getOffsetT<AdpcParams>(infoBase, chInfo->adpcmOffset);
+      if (falseEndian) adpcParams->bswap();
+    }
   }
 
   waveData = getOffsetT<SoundWaveData>(data, wavHdr->dataOffset);

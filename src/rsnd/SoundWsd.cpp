@@ -63,7 +63,7 @@ void WsdWaveOld::bswap() {
   }
 }
 
-SoundWsd::SoundWsd(void* fileData, size_t fileSize) {
+SoundWsd::SoundWsd(void* fileData, size_t fileSize, void* waveData) {
   dataSize = fileSize;
   data = fileData;
 
@@ -106,8 +106,19 @@ SoundWsd::SoundWsd(void* fileData, size_t fileSize) {
         SoundWaveChannelInfo* chInfo = getOffsetT<SoundWaveChannelInfo>(waveInfo, channelInfoOffsets[j]);
         if (falseEndian) chInfo->bswap();
 
-        AdpcParams* adpcParams = getOffsetT<AdpcParams>(waveInfo, chInfo->adpcmOffset);
-        if (falseEndian) adpcParams->bswap();
+        if (waveInfo->format == WaveInfo::FORMAT_ADPCM) {
+          AdpcParams* adpcParams = getOffsetT<AdpcParams>(waveInfo, chInfo->adpcmOffset);
+          if (falseEndian) adpcParams->bswap();
+        }
+
+        if (falseEndian && waveInfo->format == WaveInfo::FORMAT_PCM16 && waveData != nullptr) {
+          // audio samples also need byteswap in this case
+          s16* blockData = reinterpret_cast<s16*>((u8*)waveData + waveInfo->dataLoc + chInfo->dataOffset);
+          u32 sampleCount = dspAddressToSamples(waveInfo->loopEnd);
+          for (int sample = 0; sample < sampleCount; sample++) {
+            blockData[sample] = std::byteswap(blockData[sample]);
+          }
+        }
       }
     }
   } else {
