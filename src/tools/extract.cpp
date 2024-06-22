@@ -86,7 +86,7 @@ void extract_brsar_groups(const SoundArchive& soundArchive, const CliOpts& cliOp
   for (int i = 0; i < groupTable->size; i++) {
     const GroupInfo* groupInfo = soundArchive.getGroupInfo(i);
     const char* name = soundArchive.getString(groupInfo->nameIdx);
-    if (!name) continue;
+    if (!name) name = "_anonymous_group_";
     if (soundArchive.isGroupExternal(i)) continue;
 
     std::filesystem::path groupPath = contentsDir / name;
