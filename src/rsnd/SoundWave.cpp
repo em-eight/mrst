@@ -20,6 +20,22 @@ void SoundWaveInfo::bswap() {
   this->WaveInfo::bswap();
 }
 
+u32 sampleByDspAddress(u32 sample, u8 format) {
+  switch (format)
+  {
+  case SoundWaveInfo::FORMAT_PCM8:
+  case SoundWaveInfo::FORMAT_PCM16:
+    return sample;
+  
+  case SoundWaveInfo::FORMAT_ADPCM:
+    return dspAddressToSamples(sample);
+  
+  default:
+    std::cerr << "Warning: unknown track format " << (int)format << '\n';
+    return 0;
+  }
+}
+
 SoundWave::SoundWave(void* fileData, size_t fileSize) {
   dataSize = fileSize;
   data = fileData;
@@ -30,6 +46,8 @@ SoundWave::SoundWave(void* fileData, size_t fileSize) {
 
   info = getOffsetT<SoundWaveInfo>(data, wavHdr->infoOffset);
   if (falseEndian) info->bswap();
+  info->loopStart = sampleByDspAddress(info->loopStart, info->format);
+  info->loopEnd = sampleByDspAddress(info->loopStart, info->format) + 1;
   infoBase = getOffset(info, sizeof(BinaryBlockHeader));
 
   u32* channelInfoOffsets = getOffsetT<u32>(infoBase, info->channelInfoTableOffset);
@@ -59,59 +77,8 @@ SoundWave::SoundWave(void* fileData, size_t fileSize) {
   }
 }
 
-u32 SoundWave::getLoopStart() const {
-  switch (info->format)
-  {
-  case SoundWaveInfo::FORMAT_PCM8:
-    return info->loopStart;
-  
-  case SoundWaveInfo::FORMAT_PCM16:
-    return info->loopStart;
-  
-  // info->dataLoc or loopEnd playing a role here?
-  case SoundWaveInfo::FORMAT_ADPCM:
-    return (14*(info->loopStart-8)/8)/info->channelCount;
-  
-  default:
-    std::cerr << "Warning: unknown track format " << info->format << '\n';
-    return 0;
-  }
-}
-
-u32 SoundWave::getLoopEnd() const {
-  switch (info->format)
-  {
-  case SoundWaveInfo::FORMAT_PCM8:
-    return info->loopEnd;
-  
-  case SoundWaveInfo::FORMAT_PCM16:
-    return info->loopEnd;
-  
-  // info->dataLoc or loopEnd playing a role here?
-  case SoundWaveInfo::FORMAT_ADPCM:
-    return (14*(info->loopEnd-8)/8)/info->channelCount;
-  
-  default:
-    std::cerr << "Warning: unknown track format " << info->format << '\n';
-    return 0;
-  }
-}
-
 u32 SoundWave::getTrackSampleCount() const {
-  switch (info->format)
-  {
-  case SoundWaveInfo::FORMAT_PCM8:
-  case SoundWaveInfo::FORMAT_PCM16:
-    return info->loopEnd;
-  
-  // info->dataLoc or loopEnd playing a role here?
-  case SoundWaveInfo::FORMAT_ADPCM:
-    return (14*(waveData->length-8)/8)/info->channelCount;
-  
-  default:
-    std::cerr << "Warning: unknown track format " << info->format << '\n';
-    return 0;
-  }
+  return sampleByDspAddress(waveData->length, info->format) / info->channelCount;
 }
 
 void SoundWave::decodeChannel(u8 channelIdx, s16* buffer, u8 offset, u8 stride) const {

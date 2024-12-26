@@ -114,7 +114,7 @@ SoundWsd::SoundWsd(void* fileData, size_t fileSize, void* waveData) {
         if (falseEndian && waveInfo->format == WaveInfo::FORMAT_PCM16 && waveData != nullptr) {
           // audio samples also need byteswap in this case
           s16* blockData = reinterpret_cast<s16*>((u8*)waveData + waveInfo->dataLoc + chInfo->dataOffset);
-          u32 sampleCount = dspAddressToSamples(waveInfo->loopEnd);
+          u32 sampleCount = waveInfo->loopEnd;
           for (int sample = 0; sample < sampleCount; sample++) {
             blockData[sample] = std::byteswap(blockData[sample]);
           }
@@ -159,8 +159,8 @@ void SoundWsd::trackToWaveFile(u8 trackIdx, void* waveData, std::filesystem::pat
   const WaveInfo* waveInfo = getWaveInfo(trackIdx);
   u32 channelCount = waveInfo->channelCount;
     
-  u32 loopStart = dspAddressToSamples(waveInfo->loopStart);
-  u32 loopEnd = dspAddressToSamples(waveInfo->loopEnd);
+  u32 loopStart = waveInfo->loopStart;
+  u32 loopEnd = waveInfo->loopEnd;
   u32 sampleBufferSize = channelCount * loopEnd * sizeof(s16);
   s16* pcmBuffer = static_cast<s16*>(malloc(sampleBufferSize));
 

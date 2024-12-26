@@ -85,7 +85,7 @@ SoundBank::SoundBank(void* fileData, size_t fileSize, void* waveData) {
         if (falseEndian && waveInfo->format == WaveInfo::FORMAT_PCM16 && waveData != nullptr) {
           // audio samples also need byteswap in this case
           s16* blockData = reinterpret_cast<s16*>((u8*)waveData + waveInfo->dataLoc + chInfo->dataOffset);
-          u32 sampleCount = dspAddressToSamples(waveInfo->loopEnd);
+          u32 sampleCount = waveInfo->loopEnd;
           for (int sample = 0; sample < sampleCount; sample++) {
             blockData[sample] = std::byteswap(blockData[sample]);
           }
