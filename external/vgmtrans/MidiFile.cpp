@@ -337,7 +337,11 @@ void MidiFile::WriteMidiToBuffer(std::vector<uint8_t> &buf) {
         case rsnd::MML_FXSEND_C:
           curOffset++;
           break;
-        default:
+        case rsnd::MML_TIMEBASE: {
+          u8 timebase = *(trackData + curOffset++);
+          this->ppqn = timebase; // cannot have dynamic timebase!
+          break;
+        } default:
           std::cerr << "Error: Unknown MML command " << std::hex << "0x" << (int)status_byte << '\n';
           exit(-1);
           break;

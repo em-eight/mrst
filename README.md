@@ -26,9 +26,11 @@ Decodes file into modern standard format. BRSTM/BRWAV files are converted to WAV
 | BRWAR  | Y    | Y       | N/A    |
 | BRWAV  | Y    | N/A     | Y      |
 | BRSTM  | Y    | N/A     | Y      |
-| BRBNK  | Y    | N/A     | Y      |
+| BRBNK  | Y    | N/A     | Y*     |
 | BRSEQ  | Y    | N/A     | Y      |
 | BRWSD  | Y    | N/A     | N/A    |
+
+\* decode subcommand on that file specifically doesn't work since external information is needed to create an SF2. Use `--decode` on the original BRSAR instead.
 
 Although I tried to incorporate all the features of past decoder implementations, MIDI conversion is a work in progress and not all RSEQ behavior can be translated into MIDI.
 
