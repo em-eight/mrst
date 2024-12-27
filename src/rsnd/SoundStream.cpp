@@ -291,7 +291,7 @@ s16* SoundStream::getTrackPcm(u8 trackIdx, u8& channelCount) const {
 void SoundStream::trackToWaveFile(u8 trackIdx, std::filesystem::path wavePath) const {
   u8 channelCount;
   void* data = getTrackPcm(trackIdx, channelCount);
-  createWaveFile(wavePath, data, getSampleCount(), strmDataInfo->sampleRate, channelCount);
+  createWaveFile(wavePath, data, getSampleCount(), strmDataInfo->getSampleRate(), channelCount);
   free(data);
 }
 }

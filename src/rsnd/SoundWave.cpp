@@ -129,7 +129,7 @@ s16* SoundWave::getTrackPcm() const {
 
 void SoundWave::toWaveFile(std::filesystem::path wavePath) const {
   void* data = getTrackPcm();
-  createWaveFile(wavePath, data, getTrackSampleCount(), info->sampleRate, info->channelCount);
+  createWaveFile(wavePath, data, getTrackSampleCount(), info->getSampleRate(), info->channelCount);
   free(data);
 }
 }

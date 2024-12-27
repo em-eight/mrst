@@ -28,7 +28,7 @@ std::vector<WaveAudio> toWaveCollection(const rsnd::SoundBank *bankfile, void* w
     WaveAudio& newWave = waveAudios[waveAudios.size() - 1];
     newWave.data = pcmBuffer;
     newWave.dataLength = sampleBufferSize;
-    newWave.sampleRate = waveInfo->sampleRate;
+    newWave.sampleRate = waveInfo->getSampleRate();
     newWave.loop = waveInfo->loop;
     newWave.loopStart = waveInfo->loopStart;
     newWave.loopEnd = waveInfo->loopEnd;
@@ -47,7 +47,7 @@ WaveAudio toWaveAudio(const rsnd::SoundWave *waveFile) {
 
   waveAudio.data = pcmBuffer;
   waveAudio.dataLength = sampleBufferSize;
-  waveAudio.sampleRate = waveInfo->sampleRate;
+  waveAudio.sampleRate = waveInfo->getSampleRate();
   waveAudio.loop = waveInfo->loop;
   waveAudio.loopStart = waveInfo->loopStart;
   waveAudio.loopEnd = waveInfo->loopEnd;

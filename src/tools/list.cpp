@@ -189,7 +189,7 @@ void rsndListRbnk(const SoundBank& soundBank, CliOpts& cliOpts) {
 void rsndListRstm(const SoundStream& soundStream, CliOpts& cliOpts) {
   const int trackCount = soundStream.trackTable->trackCount;
   std::cout << "Track count: " << trackCount << '\n';
-  std::cout << "Sample rate: " << (int)soundStream.strmDataInfo->sampleRate << '\n';
+  std::cout << "Sample rate: " << soundStream.strmDataInfo->getSampleRate() << '\n';
   std::cout << "Sample count: " << (int)soundStream.getSampleCount() << '\n';
 
   for (int i = 0; i < trackCount; i++) {
@@ -203,7 +203,7 @@ void rsndListRstm(const SoundStream& soundStream, CliOpts& cliOpts) {
 
 void rsndListRwav(const SoundWave& soundWave, CliOpts& cliOpts) {
   std::cout << "Channel count: " << (int)soundWave.getChannelCount() << '\n';
-  std::cout << "Sample rate: " << (int)soundWave.info->sampleRate << '\n';
+  std::cout << "Sample rate: " << soundWave.info->getSampleRate() << '\n';
   std::cout << "Sample count: " << (int)soundWave.getTrackSampleCount() << '\n';
 }
 

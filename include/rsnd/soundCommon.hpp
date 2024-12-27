@@ -84,6 +84,7 @@ struct WaveInfo {
   u32 _18;
 
   void bswap();
+  u32 getSampleRate() const { return (sampleRate24 << 16) + sampleRate; }
 };
 
 inline u32 dspAddressToSamples(u32 samples) {

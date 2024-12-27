@@ -173,7 +173,7 @@ void SoundWsd::trackToWaveFile(u8 trackIdx, void* waveData, std::filesystem::pat
     decodeBlock(blockData, loopEnd, pcmBuffer + j, channelCount, waveInfo->format, adpcParams);
   }
 
-  createWaveFile(wavePath, pcmBuffer, loopEnd, waveInfo->sampleRate, channelCount);
+  createWaveFile(wavePath, pcmBuffer, loopEnd, waveInfo->getSampleRate(), channelCount);
 
   free(pcmBuffer);
 }

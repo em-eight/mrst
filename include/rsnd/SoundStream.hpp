@@ -56,6 +56,7 @@ struct StreamDataInfo {
   u8 format;
   u8 loop;
   u8 channelCount;
+  u8 sampleRate24;
   u16 sampleRate;
   u16 blockHeaderOffset;
   u32 loopStart;
@@ -71,6 +72,7 @@ struct StreamDataInfo {
   u32 adpcmDataSize;
 
   void bswap();
+  u32 getSampleRate() const { return (sampleRate24 << 16) + sampleRate; }
 };
 
 struct TrackTable {
