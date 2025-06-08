@@ -30,7 +30,7 @@ jobs:
       shell: bash
       run: cmake --build build --target install --parallel --verbose
     
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       if: github.ref == 'refs/heads/main' && github.repository == 'em-eight/mrst'
       with:
         name: mrst-${{ runner.os }}
