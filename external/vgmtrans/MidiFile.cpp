@@ -195,6 +195,11 @@ void MidiFile::WriteMidiToBuffer(std::vector<uint8_t> &buf) {
           nextArgType = rsnd::SEQ_ARG_RANDOM;
           break;
         }
+        case rsnd::MML_VARIABLE:
+        {
+          nextArgType = rsnd::SEQ_ARG_VARIABLE;
+          break;
+        }
         case rsnd::MML_WAIT:
         {
           int dur = ReadArg(rsnd::SEQ_ARG_VARIABLE, trackData, curOffset);
@@ -245,6 +250,12 @@ void MidiFile::WriteMidiToBuffer(std::vector<uint8_t> &buf) {
           t->AddPitchBendRange(c, bend_range, 0);
           break;
         }
+        case rsnd::MML_PRIO:
+        {
+          u8 prio = *(trackData + curOffset++);
+          // can't support this in MIDI...
+          break;
+        }
         case rsnd::MML_PORTA_SW:
         {
           bool portOn = *(trackData + curOffset++) != 0;
@@ -255,6 +266,33 @@ void MidiFile::WriteMidiToBuffer(std::vector<uint8_t> &buf) {
         {
           u8 portTime = *(trackData + curOffset++);
           t->AddPortamentoTime(c, portTime);
+          break;
+        }
+        case rsnd::MML_ATTACK:
+        case rsnd::MML_DECAY:
+        case rsnd::MML_SUSTAIN:
+        case rsnd::MML_RELEASE:
+        {
+          u8 arg = *(trackData + curOffset++);
+          // can't support this in MIDI...
+          break;
+        }
+        case rsnd::MML_VOLUME2:
+        {
+          u8 expression = *(trackData + curOffset++);
+          t->AddExpression(c, expression);
+          break;
+        }
+        case rsnd::MML_LPF_CUTOFF:
+        {
+          u8 arg = *(trackData + curOffset++);
+          // can't support this in MIDI...
+          break;
+        }
+        case rsnd::MML_MOD_DELAY:
+        {
+          s16 delay = ReadArg(rsnd::SEQ_ARG_S16, trackData, curOffset);
+          // can't support this in MIDI...
           break;
         }
         case rsnd::MML_TEMPO:
@@ -341,7 +379,26 @@ void MidiFile::WriteMidiToBuffer(std::vector<uint8_t> &buf) {
           u8 timebase = *(trackData + curOffset++);
           this->ppqn = timebase; // cannot have dynamic timebase!
           break;
-        } default:
+        }
+        case rsnd::MML_DAMPER: {
+          u8 damper = *(trackData + curOffset++);
+          // can't support this in MIDI...
+          break;
+        }
+        case rsnd::MML_EX_COMMAND: {
+          // can't support this in MIDI...
+          u8 ex = *(trackData + curOffset++);
+          if ((ex & 0xF0) == 0xE0)
+            curOffset += 2;
+          else if ((ex & 0xF0) == 0x80 || (ex & 0xF0) == 0x90)
+            curOffset += 3;
+          else {
+            std::cerr << "Error: Unknown extended MML command " << std::hex << "0x" << (int)ex << '\n';
+            exit(-1);
+          }
+          break;
+        }
+        default:
           std::cerr << "Error: Unknown MML command " << std::hex << "0x" << (int)status_byte << '\n';
           exit(-1);
           break;
