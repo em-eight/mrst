@@ -34,7 +34,7 @@ void rsndDecodeStream(const SoundStream& soundStream, CliOpts& cliOpts) {
     std::filesystem::create_directories(cliOpts.outputPath);
   }
   for (int i = 0; i < soundStream.trackTable->trackCount; i++) {
-    const std::filesystem::path outpath = soundStream.trackTable->trackCount > 0 ? cliOpts.outputPath / (std::to_string(i) + ".wav") : cliOpts.outputPath;
+    const std::filesystem::path outpath = soundStream.trackTable->trackCount > 1 ? cliOpts.outputPath / (std::to_string(i) + ".wav") : cliOpts.outputPath;
     soundStream.trackToWaveFile(i, outpath);
   }
 }

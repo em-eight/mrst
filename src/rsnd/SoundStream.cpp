@@ -89,8 +89,12 @@ SoundStream::SoundStream(void* fileData, size_t fileSize) {
   strmHead->bswap();
   strmData = reinterpret_cast<SoundStreamData*>((u8*)data + strmHdr->dataOffset);
   strmData->bswap();
-  strmAdpc = reinterpret_cast<SoundStreamAdpc*>((u8*)data + strmHdr->adpcOffset);
-  strmAdpc->bswap();
+  if (strmHdr->adpcSize > 0) {
+    strmAdpc = reinterpret_cast<SoundStreamAdpc*>((u8*)data + strmHdr->adpcOffset);
+    strmAdpc->bswap();
+  } else {
+    strmAdpc = nullptr;
+  }
 
   strmDataInfo = reinterpret_cast<StreamDataInfo*>(strmHead->streamDataInfo.getAddr((u8*)strmHead + 8));
   strmDataInfo->bswap();
