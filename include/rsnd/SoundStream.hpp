@@ -141,10 +141,10 @@ public:
   const TrackInfoExtended* getTrackInfoExtended(u8 trackIdx) const;
   const TrackInfoSimple* getTrackInfoSimple(u8 trackIdx) const;
   const AdpcParams* getAdpcParams(u8 channelIdx) const;
-  const AdpcEntry* getAdpcEntry(u8 b, u8 c) const;
+  const AdpcEntry* getAdpcEntry(u32 b, u8 c) const;
   const u32 getBlockSize(u32 b) const { return b + 1 == strmDataInfo->blockCount ? strmDataInfo->finalBlockSize : strmDataInfo->blockSize; }
   const u32 getSampleCount() const;
-  const u8* getBlockData(u8 channelIdx, u8 blockIdx) const;
+  const u8* getBlockData(u8 channelIdx, u32 blockIdx) const;
   void decodeChannel(u8 channelIdx, s16* buffer, u8 offset = 0, u8 stride = 1) const;
   s16* getChannelPcm(u8 channelIdx) const;
   s16* getTrackPcm(u8 trackIdx, u8& channelCount) const;

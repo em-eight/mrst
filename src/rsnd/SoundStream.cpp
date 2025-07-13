@@ -145,7 +145,7 @@ const AdpcParams* SoundStream::getAdpcParams(u8 channelIdx) const {
   return reinterpret_cast<AdpcParams*>(chInfo->adpcParams.getAddr((u8*)strmHead + sizeof(BinaryBlockHeader)));
 }
 
-const AdpcEntry* SoundStream::getAdpcEntry(u8 b, u8 c) const {
+const AdpcEntry* SoundStream::getAdpcEntry(u32 b, u8 c) const {
   return reinterpret_cast<AdpcEntry*>((u8*)strmAdpc + sizeof(BinaryBlockHeader) + (b * strmDataInfo->channelCount + c) * sizeof(AdpcEntry));
 }
 
@@ -153,9 +153,9 @@ const u32 SoundStream::getSampleCount() const {
   return (strmDataInfo->blockCount - 1) * strmDataInfo->blockSamples + strmDataInfo->finalBlockSamples;
 }
 
-const u8* SoundStream::getBlockData(u8 channelIdx, u8 blockIdx) const {
+const u8* SoundStream::getBlockData(u8 channelIdx, u32 blockIdx) const {
   u8 c = channelIdx;
-  u8 b = blockIdx;
+  u32 b = blockIdx;
   u32 blockCount = strmDataInfo->blockCount;
   u8 channelCount = strmDataInfo->channelCount;
   u32 blockSize = strmDataInfo->blockSize;
