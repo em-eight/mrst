@@ -163,4 +163,23 @@ std::string getFileFourcc(void* data) {
   magicStr[4] = '\0';
   return std::string(magicStr);
 }
+
+const char* getFormatString(u8 format) {
+  switch (format)
+  {
+  case WaveInfo::FORMAT_PCM8:
+    return "PCM8";
+
+  case WaveInfo::FORMAT_PCM16:
+    return "PCM16";
+
+  case WaveInfo::FORMAT_ADPCM:
+    return "ADPCM";
+
+  default:
+    std::cerr << "Warning: unknown sample format " << format << '\n';
+    return "";
+  }
+}
+
 }

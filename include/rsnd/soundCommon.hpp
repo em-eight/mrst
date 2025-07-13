@@ -121,4 +121,6 @@ u32 detectFileSize(void* fileData);
 
 std::string getFileFourcc(void* data);
 inline bool isFalseEndian(u32 bom) { return bom != 0xFEFF; }
+
+const char* getFormatString(u8 format);
 }
