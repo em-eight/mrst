@@ -200,6 +200,11 @@ void MidiFile::WriteMidiToBuffer(std::vector<uint8_t> &buf) {
           nextArgType = rsnd::SEQ_ARG_VARIABLE;
           break;
         }
+        case rsnd::MML_IF:
+        {
+          // normally checks latest comparison at runtime, just ignore for now
+          break;
+        }
         case rsnd::MML_WAIT:
         {
           int dur = ReadArg(rsnd::SEQ_ARG_VARIABLE, trackData, curOffset);
