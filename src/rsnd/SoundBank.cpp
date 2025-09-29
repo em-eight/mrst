@@ -70,6 +70,8 @@ SoundBank::SoundBank(void* fileData, size_t fileSize, void* waveData) {
     for (int i = 0; i < bankWave->waveInfos.size; i++) {
       WaveInfo* waveInfo = bankWave->waveInfos.elems[i].getAddr<WaveInfo>(waveBase);
       if (falseEndian) waveInfo->bswap();
+      waveInfo->loopStart = sampleByDspAddress(waveInfo->loopStart, waveInfo->format);
+      waveInfo->loopEnd = sampleByDspAddress(waveInfo->loopEnd, waveInfo->format) + 1;
 
       u32* channelInfoOffsets = getOffsetT<u32>(waveInfo, waveInfo->channelInfoTableOffset);
       for (int j = 0; j < waveInfo->channelCount; j++) {

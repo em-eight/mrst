@@ -99,6 +99,8 @@ SoundWsd::SoundWsd(void* fileData, size_t fileSize, void* waveData) {
     for (int i = 0; i < waveInfoCount; i++) {
       WaveInfo* waveInfo = getOffsetT<WaveInfo>(waveBase, waveInfoOffs[i]);
       if (falseEndian) waveInfo->bswap();
+      waveInfo->loopStart = sampleByDspAddress(waveInfo->loopStart, waveInfo->format);
+      waveInfo->loopEnd = sampleByDspAddress(waveInfo->loopEnd, waveInfo->format) + 1;
 
       u32* channelInfoOffsets = getOffsetT<u32>(waveInfo, waveInfo->channelInfoTableOffset);
       for (int j = 0; j < waveInfo->channelCount; j++) {

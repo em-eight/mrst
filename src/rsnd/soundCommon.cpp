@@ -182,4 +182,20 @@ const char* getFormatString(u8 format) {
   }
 }
 
+u32 sampleByDspAddress(u32 sample, u8 format) {
+  switch (format)
+  {
+  case WaveInfo::FORMAT_PCM8:
+  case WaveInfo::FORMAT_PCM16:
+    return sample;
+
+  case WaveInfo::FORMAT_ADPCM:
+    return dspAddressToSamples(sample);
+
+  default:
+    std::cerr << "Warning: unknown track format " << (int)format << '\n';
+    return 0;
+  }
+}
+
 }

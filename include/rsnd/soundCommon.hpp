@@ -93,6 +93,8 @@ inline u32 dspAddressToSamples(u32 samples) {
                   sizeof(u16);
 }
 
+u32 sampleByDspAddress(u32 sample, u8 format);
+
 void decodePcm8Block(const u8* blockData, u32 sampleCount, s16* buffer, u8 stride);
 void decodePcm16Block(const u8* blockData, u32 sampleCount, s16* buffer, u8 stride);
 void decodeAdpcmBlock(const u8* blockData, u32 sampleCount, const s16 coeffs[16], s16 yn1, s16 yn2, s16* buffer, u8 stride);

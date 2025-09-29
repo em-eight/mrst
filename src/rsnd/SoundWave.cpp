@@ -20,22 +20,6 @@ void SoundWaveInfo::bswap() {
   this->WaveInfo::bswap();
 }
 
-u32 sampleByDspAddress(u32 sample, u8 format) {
-  switch (format)
-  {
-  case SoundWaveInfo::FORMAT_PCM8:
-  case SoundWaveInfo::FORMAT_PCM16:
-    return sample;
-  
-  case SoundWaveInfo::FORMAT_ADPCM:
-    return dspAddressToSamples(sample);
-  
-  default:
-    std::cerr << "Warning: unknown track format " << (int)format << '\n';
-    return 0;
-  }
-}
-
 SoundWave::SoundWave(void* fileData, size_t fileSize) {
   dataSize = fileSize;
   data = fileData;
