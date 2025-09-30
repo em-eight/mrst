@@ -13,7 +13,7 @@ Prints various information about the file
 ### `mrst extract` subcommand
 Extracts files from archive (BRSAR or BRWAR)
 
-- `--decode` additionally decodes subfiles while extracting
+- `--decode` additionally decodes subfiles while extracting. BRWAR, BRWAV and BRSTM decode to WAVE (.wav), BRBNK+BRWAR decodes to SoundFont (.sf2) and BRSEQ decodes to MIDI.
 - `--extract-rwar` For BRSAR extraction, automatically extract any BRWARs encountered
 
 ### `mrst decode` subcommand
