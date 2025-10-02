@@ -8,6 +8,7 @@
 #include "rsnd/SoundWaveArchive.hpp"
 #include "rsnd/SoundBank.hpp"
 #include "rsnd/SoundWsd.hpp"
+#include "rsnd/SoundSequence.hpp"
 #include "rsnd/soundCommon.hpp"
 #include "common/cli.h"
 #include "common/fileUtil.hpp"
@@ -16,6 +17,7 @@
 
 #include "vgmtrans/SF2File.h"
 #include "vgmtrans/WaveAudio.h"
+#include "vgmtrans/MidiFile.h"
 
 using namespace rsnd;
 
@@ -120,6 +122,13 @@ void extract_brsar_groups(const SoundArchive& soundArchive, const CliOpts& cliOp
       if (fileFormat == FMT_BRWSD && cliOpts.extractOpts.decode && detectFileFormat("", waveData, waveSize) != FMT_BRWAR && waveSize > 0) {
         SoundWsd soundWsd(fileData, fileSize, waveData);
         extract_rwsd_embedded_wav(subGroupPath / "wave", soundWsd, waveData, waveSize);
+      }
+
+      // convert RSEQ files during extraction if asked for
+      if (fileFormat == FMT_BRSEQ && cliOpts.extractOpts.decode) {
+        SoundSequence soundSequence(fileData, fileSize);
+        MidiFile midiFile(&soundSequence);
+        midiFile.SaveMidiFile(subGroupPath / "file.mid");
       }
 
       // write wave data
