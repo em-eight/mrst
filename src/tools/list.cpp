@@ -129,6 +129,9 @@ void rsndListRsar(const SoundArchive& soundArchive, CliOpts& cliOpts) {
   if (cliOpts.listOpts.sounds) {
     rsndListRsarSounds(soundArchive, cliOpts);
   }
+  if (!cliOpts.listOpts.groups and !cliOpts.listOpts.banks and !cliOpts.listOpts.sounds) {
+    std::cout << "At least one of --groups, --banks, or --sounds must be specified for RSARs\n";
+  }
 }
 
 void printSubregionRecurse(const SoundBank& soundBank, DataRef* ref, int depth) {
