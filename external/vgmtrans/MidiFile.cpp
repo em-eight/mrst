@@ -96,10 +96,12 @@ uint32_t ReadVarLen(const u8* data, uint32_t &offset) {
 }
 
 rsnd::SeqArgType nextArgType = rsnd::SEQ_ARG_NONE;
+u32 nextArgOffset = 0;
 
 uint32_t ReadArg(rsnd::SeqArgType defaultArgType, const u8* data, uint32_t &offset) {
   rsnd::SeqArgType argType = nextArgType == rsnd::SEQ_ARG_NONE ? defaultArgType : nextArgType;
   nextArgType = rsnd::SEQ_ARG_NONE;
+  nextArgOffset = 0;
 
   switch (argType) {
   case rsnd::SEQ_ARG_VARIABLE:
@@ -177,6 +179,10 @@ void MidiFile::WriteMidiToBuffer(std::vector<uint8_t> &buf) {
     bool exitLoop = false;
     while (!exitLoop) {
       int beginOffset = curOffset;
+      if (nextArgOffset != 0 && nextArgOffset != beginOffset) {
+        std::cerr << "Argument type " << nextArgType << " was not immediately consumed at offset " << nextArgOffset << '\n';
+        nextArgOffset = 0;
+      }
       u8 status_byte = *rsnd::getOffsetT<const u8>(trackData, curOffset++);
       if (status_byte < 0x80) {
         /* Note on. */
@@ -193,11 +199,13 @@ void MidiFile::WriteMidiToBuffer(std::vector<uint8_t> &buf) {
         case rsnd::MML_RANDOM:
         {
           nextArgType = rsnd::SEQ_ARG_RANDOM;
+          nextArgOffset = curOffset;
           break;
         }
         case rsnd::MML_VARIABLE:
         {
           nextArgType = rsnd::SEQ_ARG_VARIABLE;
+          nextArgOffset = curOffset;
           break;
         }
         case rsnd::MML_IF:
@@ -222,19 +230,19 @@ void MidiFile::WriteMidiToBuffer(std::vector<uint8_t> &buf) {
         }
         case rsnd::MML_PAN:
         {
-          u8 pan = *(trackData + curOffset++);
+          u8 pan = ReadArg(rsnd::SEQ_ARG_U8, trackData, curOffset);
           t->AddPan(c, pan);
           break;
         }
         case rsnd::MML_VOLUME:
         {
-          u8 vol = *(trackData + curOffset++);
+          u8 vol = ReadArg(rsnd::SEQ_ARG_U8, trackData, curOffset);
           t->AddVol(c, vol);
           break;
         }
         case rsnd::MML_MAIN_VOLUME:
         {
-          u8 vol = *(trackData + curOffset++);
+          u8 vol = ReadArg(rsnd::SEQ_ARG_U8, trackData, curOffset);
           t->AddMasterVol(c, vol);
           break;
         }
@@ -393,6 +401,9 @@ void MidiFile::WriteMidiToBuffer(std::vector<uint8_t> &buf) {
         case rsnd::MML_EX_COMMAND: {
           // can't support this in MIDI...
           u8 ex = *(trackData + curOffset++);
+          // Reset the arg type, which was possibly set to VARIABLE
+          nextArgType = rsnd::SEQ_ARG_NONE;
+          nextArgOffset = 0;
           if ((ex & 0xF0) == 0xE0)
             curOffset += 2;
           else if ((ex & 0xF0) == 0x80 || (ex & 0xF0) == 0x90)
