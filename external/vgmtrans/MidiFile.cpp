@@ -85,24 +85,17 @@ uint32_t ReadVarLen(const u8* data, uint32_t &offset) {
   uint32_t value = 0;
 
   for (int i = 0; i < 5; i++) {
-	  uint8_t c = *(data + offset++);
+    uint8_t c = *(data + offset++);
     value = (value << 7) + (c & 0x7F);
-	  // Check if continue bit is set
-	  if((c & 0x80) == 0) {
-		  break;
-	  }
+    // Check if continue bit is set
+    if((c & 0x80) == 0) {
+      break;
+    }
   }
   return value;
 }
 
-rsnd::SeqArgType nextArgType = rsnd::SEQ_ARG_NONE;
-u32 nextArgOffset = 0;
-
-uint32_t ReadArg(rsnd::SeqArgType defaultArgType, const u8* data, uint32_t &offset) {
-  rsnd::SeqArgType argType = nextArgType == rsnd::SEQ_ARG_NONE ? defaultArgType : nextArgType;
-  nextArgType = rsnd::SEQ_ARG_NONE;
-  nextArgOffset = 0;
-
+uint32_t ReadArg(rsnd::SeqArgType argType, const u8* data, uint32_t &offset) {
   switch (argType) {
   case rsnd::SEQ_ARG_VARIABLE:
     return ReadVarLen(data, offset);
@@ -111,7 +104,7 @@ uint32_t ReadArg(rsnd::SeqArgType defaultArgType, const u8* data, uint32_t &offs
   case rsnd::SEQ_ARG_S16: {
     auto val = std::byteswap(*(u16*)(data + offset));
     offset += 2;
-    return val;
+    return (s16)val;
   } case rsnd::SEQ_ARG_RANDOM: {
     int16_t min = std::byteswap(*(u16*)(data + offset));
     offset += 2;
@@ -179,245 +172,278 @@ void MidiFile::WriteMidiToBuffer(std::vector<uint8_t> &buf) {
     bool exitLoop = false;
     while (!exitLoop) {
       int beginOffset = curOffset;
-      if (nextArgOffset != 0 && nextArgOffset != beginOffset) {
-        std::cerr << "Argument type " << nextArgType << " was not immediately consumed at offset " << nextArgOffset << '\n';
-        nextArgOffset = 0;
-      }
       u8 status_byte = *rsnd::getOffsetT<const u8>(trackData, curOffset++);
+      bool forceArgType = false;
+      rsnd::SeqArgType nextArgType = rsnd::SEQ_ARG_NONE;
+
+      // Handle meta-commands that influence the argument used
+      if (status_byte == rsnd::MML_IF) {
+          // For now we ignore the logical part of this and just always pass
+          status_byte = *rsnd::getOffsetT<const u8>(trackData, curOffset++);
+      }
+
+      if (status_byte == rsnd::MML_RANDOM) {
+          status_byte = *rsnd::getOffsetT<const u8>(trackData, curOffset++);
+          nextArgType = rsnd::SEQ_ARG_RANDOM;
+          forceArgType = true;
+      }
+
+      if (status_byte == rsnd::MML_VARIABLE) {
+          status_byte = *rsnd::getOffsetT<const u8>(trackData, curOffset++);
+          nextArgType = rsnd::SEQ_ARG_VARIABLE;
+          forceArgType = true;
+      }
+
+      // Now process the current command normally
       if (status_byte < 0x80) {
         /* Note on. */
         uint8_t vel = *rsnd::getOffsetT<const u8>(trackData, curOffset++);
-        int dur = ReadArg(rsnd::SEQ_ARG_VARIABLE, trackData, curOffset);
+        int dur = ReadArg(forceArgType ? nextArgType : rsnd::SEQ_ARG_VARIABLE, trackData, curOffset);
         t->AddNoteByDur(c, status_byte + transpose, vel, dur);
         std::cout << "Note " << std::dec << (int)status_byte << ", " << (int)vel << ", " << (int)dur << '\n';
         if (noteWait) {
           t->AddDelta(dur);
         }
       } else {
+        s32 arg1 = 0;
+        s32 arg2 = 0;
+        // First, figure out what arguments will be required
+        switch (status_byte & 0xF0)
+        {
+          case 0x80:
+          {
+            switch (status_byte)
+            {
+              case rsnd::MML_WAIT:
+              case rsnd::MML_PRG:
+              {
+                arg1 = ReadArg(forceArgType ? nextArgType : rsnd::SEQ_ARG_VARIABLE, trackData, curOffset);
+                break;
+              }
+              case rsnd::MML_OPEN_TRACK:
+              {
+                arg1 = *(trackData + curOffset++);
+                arg2 = readbe24(trackData, curOffset);
+                break;
+              }
+              case rsnd::MML_JUMP:
+              case rsnd::MML_CALL:
+              {
+                arg1 = readbe24(trackData, curOffset);
+                break;
+              }
+            }
+            break;
+          }
+          case 0xB0:
+          case 0xC0:
+          case 0xD0:
+          {
+            switch (status_byte)
+            {
+              case rsnd::MML_TRANSPOSE:
+              case rsnd::MML_PITCH_BEND:
+              {
+                arg1 = (s8)ReadArg(forceArgType ? nextArgType : rsnd::SEQ_ARG_U8, trackData, curOffset);
+                break;
+              }
+              default:
+              {
+                arg1 = ReadArg(forceArgType ? nextArgType : rsnd::SEQ_ARG_U8, trackData, curOffset);
+                break;
+              }
+            }
+            break;
+          }
+          case 0xE0:
+          {
+            arg1 = ReadArg(forceArgType ? nextArgType : rsnd::SEQ_ARG_S16, trackData, curOffset);
+            break;
+          }
+          // 0xF0 commands are a weird case, so handle those later on
+        }
+
+        // Now that we have our arguments, actually run the command
         switch (status_byte)
         {
-        case rsnd::MML_RANDOM:
-        {
-          nextArgType = rsnd::SEQ_ARG_RANDOM;
-          nextArgOffset = curOffset;
-          break;
-        }
-        case rsnd::MML_VARIABLE:
-        {
-          nextArgType = rsnd::SEQ_ARG_VARIABLE;
-          nextArgOffset = curOffset;
-          break;
-        }
-        case rsnd::MML_IF:
-        {
-          // normally checks latest comparison at runtime, just ignore for now
-          break;
-        }
-        case rsnd::MML_WAIT:
-        {
-          int dur = ReadArg(rsnd::SEQ_ARG_VARIABLE, trackData, curOffset);
-          std::cout << "rest " << std::dec << (int)dur << '\n';
-          t->PurgePrevNoteOffs();
-          t->AddDelta(dur);
-          break;
-        }
-        case rsnd::MML_PRG:
-        {
-          u8 prog = ReadArg(rsnd::SEQ_ARG_VARIABLE, trackData, curOffset);
-          std::cout << "Program change " << std::dec << (int)prog << '\n';
-          t->AddProgramChange(c, prog);
-          break;
-        }
-        case rsnd::MML_PAN:
-        {
-          u8 pan = ReadArg(rsnd::SEQ_ARG_U8, trackData, curOffset);
-          t->AddPan(c, pan);
-          break;
-        }
-        case rsnd::MML_VOLUME:
-        {
-          u8 vol = ReadArg(rsnd::SEQ_ARG_U8, trackData, curOffset);
-          t->AddVol(c, vol);
-          break;
-        }
-        case rsnd::MML_MAIN_VOLUME:
-        {
-          u8 vol = ReadArg(rsnd::SEQ_ARG_U8, trackData, curOffset);
-          t->AddMasterVol(c, vol);
-          break;
-        }
-        case rsnd::MML_TRANSPOSE:
-        {
-          transpose = ReadArg(rsnd::SEQ_ARG_U8, trackData, curOffset);
-          break;
-        }
-        case rsnd::MML_PITCH_BEND:
-        {
-          u8 pitch_bend = ReadArg(rsnd::SEQ_ARG_U8, trackData, curOffset);
-          t->AddPitchBend(c, pitch_bend);
-          break;
-        }
-        case rsnd::MML_BEND_RANGE:
-        {
-          u8 bend_range = *(trackData + curOffset++);
-          t->AddPitchBendRange(c, bend_range, 0);
-          break;
-        }
-        case rsnd::MML_PRIO:
-        {
-          u8 prio = *(trackData + curOffset++);
-          // can't support this in MIDI...
-          break;
-        }
-        case rsnd::MML_PORTA_SW:
-        {
-          bool portOn = *(trackData + curOffset++) != 0;
-          t->AddPortamento(c, portOn);
-          break;
-        }
-        case rsnd::MML_PORTA_TIME:
-        {
-          u8 portTime = *(trackData + curOffset++);
-          t->AddPortamentoTime(c, portTime);
-          break;
-        }
-        case rsnd::MML_ATTACK:
-        case rsnd::MML_DECAY:
-        case rsnd::MML_SUSTAIN:
-        case rsnd::MML_RELEASE:
-        {
-          u8 arg = *(trackData + curOffset++);
-          // can't support this in MIDI...
-          break;
-        }
-        case rsnd::MML_VOLUME2:
-        {
-          u8 expression = *(trackData + curOffset++);
-          t->AddExpression(c, expression);
-          break;
-        }
-        case rsnd::MML_LPF_CUTOFF:
-        {
-          u8 arg = *(trackData + curOffset++);
-          // can't support this in MIDI...
-          break;
-        }
-        case rsnd::MML_MOD_DELAY:
-        {
-          s16 delay = ReadArg(rsnd::SEQ_ARG_S16, trackData, curOffset);
-          // can't support this in MIDI...
-          break;
-        }
-        case rsnd::MML_TEMPO:
-        {
-          s16 tempo = ReadArg(rsnd::SEQ_ARG_S16, trackData, curOffset);
-          t->AddTempoBPM(tempo);
-          break;
-        }
-        case rsnd::MML_FIN:
-        {
-          exitLoop = true;
-          break;
-        }
-        // MIDI incompatible commands
-        case rsnd::MML_ALLOC_TRACK:
-        {
-          curOffset += 2;
-          break;
-        }
-        case rsnd::MML_OPEN_TRACK:
-        {
-          auto trackNo = *(trackData + curOffset++);
-          auto begOffset = readbe24(trackData, curOffset);
-          toProcessTracks.push({ trackNo, t->GetDelta(), begOffset});
-          break;
-        }
-        case rsnd::MML_CALL:
-        {
-          u32 destOffset = readbe24(trackData, curOffset);
-          callStack.push({ curOffset, t->GetDelta(), 0 });
-          curOffset = destOffset;
-          std::cout << "push curOffset " << curOffset << std::endl;
-          break;
-        }
-        case rsnd::MML_RET:
-        {
-          if (callStack.size() == 0) {
+          case rsnd::MML_WAIT:
+          {
+            std::cout << "rest " << std::dec << arg1 << '\n';
+            t->PurgePrevNoteOffs();
+            t->AddDelta(arg1);
+            break;
+          }
+          case rsnd::MML_PRG:
+          {
+            std::cout << "Program change " << std::dec << arg1 << '\n';
+            t->AddProgramChange(c, arg1);
+            break;
+          }
+          case rsnd::MML_PAN:
+          {
+            t->AddPan(c, arg1);
+            break;
+          }
+          case rsnd::MML_VOLUME:
+          {
+            t->AddVol(c, arg1);
+            break;
+          }
+          case rsnd::MML_MAIN_VOLUME:
+          {
+            t->AddMasterVol(c, arg1);
+            break;
+          }
+          case rsnd::MML_TRANSPOSE:
+          {
+            transpose = arg1;
+            break;
+          }
+          case rsnd::MML_PITCH_BEND:
+          {
+            t->AddPitchBend(c, arg1);
+            break;
+          }
+          case rsnd::MML_BEND_RANGE:
+          {
+            t->AddPitchBendRange(c, arg1, 0);
+            break;
+          }
+          case rsnd::MML_PRIO:
+          {
+            // can't support this in MIDI...
+            break;
+          }
+          case rsnd::MML_PORTA_SW:
+          {
+            t->AddPortamento(c, arg1 != 0);
+            break;
+          }
+          case rsnd::MML_PORTA_TIME:
+          {
+            t->AddPortamentoTime(c, arg1);
+            break;
+          }
+          case rsnd::MML_ATTACK:
+          case rsnd::MML_DECAY:
+          case rsnd::MML_SUSTAIN:
+          case rsnd::MML_RELEASE:
+          {
+            // can't support this in MIDI...
+            break;
+          }
+          case rsnd::MML_VOLUME2:
+          {
+            t->AddExpression(c, arg1);
+            break;
+          }
+          case rsnd::MML_LPF_CUTOFF:
+          {
+            // can't support this in MIDI...
+            break;
+          }
+          case rsnd::MML_MOD_DELAY:
+          {
+            // can't support this in MIDI...
+            break;
+          }
+          case rsnd::MML_TEMPO:
+          {
+            t->AddTempoBPM(arg1);
+            break;
+          }
+          case rsnd::MML_FIN:
+          {
             exitLoop = true;
             break;
           }
-          curOffset = callStack.top().retOffset;
-          callStack.pop();
-          std::cout << "pop curOffset " << curOffset << std::endl;
-          break;
-        }
-        case rsnd::MML_JUMP:
-        {
-          // TODO: jump?
-          u32 destOffset = readbe24(trackData, curOffset);
-          if (processedJumps.contains(curOffset)) {
-            /* This isn't going to go anywhere... just quit early. */
-            exitLoop = true;
-          } else {
-            processedJumps.insert(curOffset);
-            curOffset = destOffset;
-            std::cout << "Jump curOffset " << curOffset << std::endl;
-          }
-          break;
-        }
-        case rsnd::MML_NOTE_WAIT:
-        {
-          noteWait = !!*(trackData + curOffset++);
-          break;
-        }
-        case rsnd::MML_MOD_DEPTH:
-        {
-          u8 amount = *(trackData + curOffset++);
-          t->AddModulation(c, amount);
-          break;
-        }
-        case rsnd::MML_MOD_SPEED:
-        case rsnd::MML_MOD_TYPE:
-        case rsnd::MML_MOD_RANGE:
-        {
-          curOffset++;
-          break;
-        }
-        case rsnd::MML_FXSEND_A:
-        case rsnd::MML_FXSEND_B:
-        case rsnd::MML_FXSEND_C:
-          curOffset++;
-          break;
-        case rsnd::MML_TIMEBASE: {
-          u8 timebase = *(trackData + curOffset++);
-          this->ppqn = timebase; // cannot have dynamic timebase!
-          break;
-        }
-        case rsnd::MML_DAMPER: {
-          u8 damper = *(trackData + curOffset++);
-          // can't support this in MIDI...
-          break;
-        }
-        case rsnd::MML_EX_COMMAND: {
-          // can't support this in MIDI...
-          u8 ex = *(trackData + curOffset++);
-          // Reset the arg type, which was possibly set to VARIABLE
-          nextArgType = rsnd::SEQ_ARG_NONE;
-          nextArgOffset = 0;
-          if ((ex & 0xF0) == 0xE0)
+          // MIDI incompatible commands
+          case rsnd::MML_ALLOC_TRACK:
+          {
             curOffset += 2;
-          else if ((ex & 0xF0) == 0x80 || (ex & 0xF0) == 0x90)
-            curOffset += 3;
-          else {
-            std::cerr << "Error: Unknown extended MML command " << std::hex << "0x" << (int)ex << '\n';
-            exit(-1);
+            break;
           }
-          break;
-        }
-        default:
-          std::cerr << "Error: Unknown MML command " << std::hex << "0x" << (int)status_byte << '\n';
-          exit(-1);
-          break;
+          case rsnd::MML_OPEN_TRACK:
+          {
+            // arg1 is trackNo, arg2 is begOffset
+            toProcessTracks.push({ (u8)arg1, t->GetDelta(), (u32)arg2 });
+            break;
+          }
+          case rsnd::MML_CALL:
+          {
+            callStack.push({ curOffset, t->GetDelta(), 0 });
+            curOffset = arg1;
+            std::cout << "push curOffset " << curOffset << std::endl;
+            break;
+          }
+          case rsnd::MML_RET:
+          {
+            if (callStack.size() == 0) {
+              exitLoop = true;
+              break;
+            }
+            curOffset = callStack.top().retOffset;
+            callStack.pop();
+            std::cout << "pop curOffset " << curOffset << std::endl;
+            break;
+          }
+          case rsnd::MML_JUMP:
+          {
+            // TODO: jump?
+            if (processedJumps.contains(curOffset)) {
+              /* This isn't going to go anywhere... just quit early. */
+              std::cout << "Infinite jump loop detected when going to " << curOffset << std::endl;
+              exitLoop = true;
+            } else {
+              processedJumps.insert(curOffset);
+              curOffset = arg1;
+              std::cout << "Jump curOffset " << curOffset << std::endl;
+            }
+            break;
+          }
+          case rsnd::MML_NOTE_WAIT:
+          {
+            noteWait = !!arg1;
+            break;
+          }
+          case rsnd::MML_MOD_DEPTH:
+          {
+            t->AddModulation(c, arg1);
+            break;
+          }
+          case rsnd::MML_MOD_SPEED:
+          case rsnd::MML_MOD_TYPE:
+          case rsnd::MML_MOD_RANGE:
+          case rsnd::MML_FXSEND_A:
+          case rsnd::MML_FXSEND_B:
+          case rsnd::MML_FXSEND_C:
+            break;
+          case rsnd::MML_TIMEBASE: {
+            this->ppqn = arg1; // cannot have dynamic timebase!
+            break;
+          }
+          case rsnd::MML_DAMPER: {
+            // can't support this in MIDI...
+            break;
+          }
+          case rsnd::MML_EX_COMMAND: {
+            // can't support this in MIDI...
+            u8 ex = *(trackData + curOffset++);
+            if ((ex & 0xF0) == 0xE0)
+              ReadArg(forceArgType ? nextArgType : rsnd::SEQ_ARG_S16, trackData, curOffset);
+            else if ((ex & 0xF0) == 0x80 || (ex & 0xF0) == 0x90) {
+              ReadArg(forceArgType ? nextArgType : rsnd::SEQ_ARG_S16, trackData, curOffset);
+              curOffset += 1;
+            } else {
+              std::cerr << "Error: Unknown extended MML command " << std::hex << "0x" << (int)ex << '\n';
+              exit(-1);
+            }
+            break;
+          }
+          default:
+            std::cerr << "Error: Unknown MML command " << std::hex << "0x" << (int)status_byte << '\n';
+            exit(-1);
+            break;
         }
       }
     }
@@ -617,14 +643,14 @@ void MidiTrack::PurgePrevNoteOffs(uint32_t absTime) {
 
 /*void MidiTrack::AddVolMarker(uint8_t channel, uint8_t vol, int8_t priority)
 {
-	MidiEvent* newEvent = new VolMarkerEvent(this, channel, GetDelta(), vol);
-	aEvents.push_back(newEvent);
+    MidiEvent* newEvent = new VolMarkerEvent(this, channel, GetDelta(), vol);
+    aEvents.push_back(newEvent);
 }
 
 void MidiTrack::InsertVolMarker(uint8_t channel, uint8_t vol, uint32_t absTime, int8_t priority)
 {
-	MidiEvent* newEvent = new VolMarkerEvent(this, channel, absTime, vol);
-	aEvents.push_back(newEvent);
+    MidiEvent* newEvent = new VolMarkerEvent(this, channel, absTime, vol);
+    aEvents.push_back(newEvent);
 }*/
 
 void MidiTrack::AddControllerEvent(uint8_t channel, uint8_t controllerNum, uint8_t theDataByte) {
@@ -1107,13 +1133,13 @@ uint32_t NoteEvent::WriteEvent(std::vector<uint8_t> &buf, uint32_t time) {
 /*
 DurNoteEvent* DurNoteEvent::MakeCopy()
 {
-	return new DurNoteEvent(prntTrk, channel, AbsTime, key, vel, duration);
+    return new DurNoteEvent(prntTrk, channel, AbsTime, key, vel, duration);
 }*/
 
 /*void DurNoteEvent::PrepareWrite(vector<MidiEvent*> & aEvents)
 {
-	prntTrk->aEvents.push_back(new NoteEvent(prntTrk, channel, AbsTime, true, key, vel));	//add note on
-	prntTrk->aEvents.push_back(new NoteEvent(prntTrk, channel, AbsTime+duration, false, key, vel));  //add note off at end of dur
+    prntTrk->aEvents.push_back(new NoteEvent(prntTrk, channel, AbsTime, true, key, vel));	//add note on
+    prntTrk->aEvents.push_back(new NoteEvent(prntTrk, channel, AbsTime+duration, false, key, vel));  //add note off at end of dur
 }*/
 
 //uint32_t DurNoteEvent::WriteEvent(vector<uint8_t> & buf, uint32_t time)		//we do note use WriteEvent on DurNoteEvents... this is what PrepareWrite is for, to create NoteEvents in substitute
@@ -1132,7 +1158,7 @@ DurNoteEvent* DurNoteEvent::MakeCopy()
 
 VolEvent* VolEvent::MakeCopy()
 {
-	return new VolEvent(prntTrk, channel, AbsTime, vol, priority);
+    return new VolEvent(prntTrk, channel, AbsTime, vol, priority);
 }*/
 
 //  ***************
