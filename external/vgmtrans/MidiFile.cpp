@@ -154,6 +154,8 @@ void MidiFile::WriteMidiToBuffer(std::vector<uint8_t> &buf) {
   std::queue<TrackQueueElem> toProcessTracks;
   toProcessTracks.push({ 0, 0, 0 });
 
+  // The format parsing logic is taken from a decompile of MmlParser.cpp by kiwi515
+  // https://github.com/kiwi515/ogws/blob/d66afffde51781cfed49b378120a181e95456bba/src/nw4r/snd/snd_MmlParser.cpp
   while (!toProcessTracks.empty()) {
     TrackQueueElem toProcessTrack = toProcessTracks.front();
     toProcessTracks.pop();
